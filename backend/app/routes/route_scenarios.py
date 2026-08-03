@@ -1,0 +1,54 @@
+from fastapi import APIRouter, HTTPException
+
+from app.schemas import RouteComparison, RouteScenario
+from app.services.data_loader import get_route_by_id, load_routes
+from app.services.scoring import (
+    calculate_car_dependency_score,
+    calculate_emissions_saved,
+    calculate_transit_penalty,
+    calculate_weekly_extra_transit_hours,
+)
+from app.services.simulator import recommend_improvement
+
+
+router = APIRouter(prefix="/api/routes", tags=["routes"])
+
+
+@router.get("", response_model=list[RouteScenario])
+def list_routes(city: str | None = None) -> list[RouteScenario]:
+    routes = load_routes()
+
+    if city:
+        routes = [route for route in routes if route.city.lower() == city.lower()]
+
+    return routes
+
+
+@router.get("/{route_id}", response_model=RouteScenario)
+def get_route(route_id: int) -> RouteScenario:
+    route = get_route_by_id(route_id)
+
+    if route is None:
+        raise HTTPException(status_code=404, detail="Route not found.")
+
+    return route
+
+
+@router.get("/{route_id}/comparison", response_model=RouteComparison)
+def get_route_comparison(route_id: int) -> RouteComparison:
+    route = get_route_by_id(route_id)
+
+    if route is None:
+        raise HTTPException(status_code=404, detail="Route not found.")
+
+    improvement, minutes_saved = recommend_improvement(route)
+
+    return RouteComparison(
+        route=route,
+        transit_penalty=calculate_transit_penalty(route),
+        car_dependency_score=calculate_car_dependency_score(route),
+        weekly_extra_transit_hours=calculate_weekly_extra_transit_hours(route),
+        emissions_saved_kg=calculate_emissions_saved(route),
+        recommended_improvement=improvement,
+        estimated_minutes_saved=minutes_saved,
+    )
