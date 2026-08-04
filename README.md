@@ -50,7 +50,7 @@ Route search, analysis, and comparison UI
 
 ## Data & Accuracy
 
-Route data in this project — distances, drive/transit times, fares, emissions — is **manually estimated for V1**, not sourced from GTFS, DART, CTA, or any official transit API. It exists to test the app's data flow and UI end to end before real transit data is integrated. Every route's `notes` field says so explicitly (`"Manual V1 sample estimate; verify before research use."`). Treat all numbers here as placeholders, not research-grade figures.
+Route data in this project consists of distances, drive/transit times, fares, emissions, which is manually estimated for V1 (not sourced from GTFS, DART, CTA, or any official transit API). It exists to test the app's data flow and UI end to end before real transit data is integrated. Every route's `notes` field says so explicitly (`"Manual V1 sample estimate; verify before research use."`). Treat all numbers here as placeholders, not research-grade figures.
 
 ## Getting Started
 
@@ -119,17 +119,17 @@ GET /api/routes/{route_id}/comparison
 
 ## Roadmap
 
-**Done:**
+Done:
 1. FastAPI backend with route and comparison endpoints
 2. React + TypeScript frontend with search/select/analyze flow
 3. SQLite data layer replacing the JSON file at runtime
 4. 12 manual sample route scenarios across Dallas and Chicago
 
-**Next (V1):**
+Next (V1):
 5. README and developer setup docs (this milestone)
 6. Basic dashboard: total route count, average transit penalty, highest car dependency score, worst wait/transfer burden, filter by city/category
 
-**Later (V2):**
+Later (V2):
 7. CTA/DART research and real transit data ingestion
 8. External route/search API integration (e.g. Google Maps)
 
