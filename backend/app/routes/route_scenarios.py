@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from app.schemas import RouteComparison, RouteScenario
+from app.schemas import CurrentRouteMetrics, RouteComparison, RouteScenario
 from app.services.data_loader import get_route_by_id, load_routes
 from app.services.scoring import (
     calculate_car_dependency_score,
@@ -41,14 +41,13 @@ def get_route_comparison(route_id: int) -> RouteComparison:
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found.")
 
-    improvement, minutes_saved = recommend_improvement(route)
-
     return RouteComparison(
         route=route,
-        transit_penalty=calculate_transit_penalty(route),
-        car_dependency_score=calculate_car_dependency_score(route),
-        weekly_extra_transit_hours=calculate_weekly_extra_transit_hours(route),
-        emissions_saved_kg=calculate_emissions_saved(route),
-        recommended_improvement=improvement,
-        estimated_minutes_saved=minutes_saved,
+        current_metrics=CurrentRouteMetrics(
+            transit_penalty=calculate_transit_penalty(route),
+            car_dependency_score=calculate_car_dependency_score(route),
+            weekly_extra_transit_hours=calculate_weekly_extra_transit_hours(route),
+            emissions_saved_kg=calculate_emissions_saved(route),
+        ),
+        recommended_improvement=recommend_improvement(route),
     )

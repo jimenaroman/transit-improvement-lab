@@ -21,11 +21,27 @@ class RouteScenario(BaseModel):
     notes: str
 
 
-class RouteComparison(BaseModel):
-    route: RouteScenario
+class RecommendedImprovement(BaseModel):
+    title: str
+    category: str
+    minutes_saved: int
+    savings_source: str
+    current_transit_minutes: int
+    new_transit_minutes: int
+    current_transit_penalty: float
+    new_transit_penalty: float
+    verdict: str
+    explanation: str
+
+
+class CurrentRouteMetrics(BaseModel):
     transit_penalty: float
     car_dependency_score: int
     weekly_extra_transit_hours: float
     emissions_saved_kg: float
-    recommended_improvement: str
-    estimated_minutes_saved: str
+
+
+class RouteComparison(BaseModel):
+    route: RouteScenario
+    current_metrics: CurrentRouteMetrics
+    recommended_improvement: RecommendedImprovement
