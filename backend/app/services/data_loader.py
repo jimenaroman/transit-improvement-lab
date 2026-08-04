@@ -1,11 +1,11 @@
 """
-Temporary V0 data access layer.
+Seed data loader.
 
-For the first backend milestone, route scenarios are loaded from
-data/sample-routes.json so the API can work before a database is added.
-
-Later, this module should be replaced or refactored into a repository layer
-that reads route scenarios from SQLite/PostgreSQL.
+Route scenarios now live in SQLite (see app/database.py and
+app/repositories/route_repository.py) — the API no longer reads this file
+directly. This module's only remaining job is parsing and validating
+data/sample-routes.json for scripts/seed_db.py, which loads it into the
+database.
 """
 
 import json
@@ -22,13 +22,3 @@ def load_routes() -> list[RouteScenario]:
         raw_routes = json.load(file)
 
     return [RouteScenario(**route) for route in raw_routes]
-
-
-def get_route_by_id(route_id: int) -> RouteScenario | None:
-    routes = load_routes()
-
-    for route in routes:
-        if route.id == route_id:
-            return route
-
-    return None

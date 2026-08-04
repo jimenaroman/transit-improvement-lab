@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
+from app.repositories import route_repository
 from app.schemas import CurrentRouteMetrics, RouteComparison, RouteScenario
-from app.services.data_loader import get_route_by_id, load_routes
 from app.services.scoring import (
     calculate_car_dependency_score,
     calculate_emissions_saved,
@@ -16,17 +16,12 @@ router = APIRouter(prefix="/api/routes", tags=["routes"])
 
 @router.get("", response_model=list[RouteScenario])
 def list_routes(city: str | None = None) -> list[RouteScenario]:
-    routes = load_routes()
-
-    if city:
-        routes = [route for route in routes if route.city.lower() == city.lower()]
-
-    return routes
+    return route_repository.list_routes(city)
 
 
 @router.get("/{route_id}", response_model=RouteScenario)
 def get_route(route_id: int) -> RouteScenario:
-    route = get_route_by_id(route_id)
+    route = route_repository.get_route_by_id(route_id)
 
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found.")
@@ -36,7 +31,7 @@ def get_route(route_id: int) -> RouteScenario:
 
 @router.get("/{route_id}/comparison", response_model=RouteComparison)
 def get_route_comparison(route_id: int) -> RouteComparison:
-    route = get_route_by_id(route_id)
+    route = route_repository.get_route_by_id(route_id)
 
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found.")

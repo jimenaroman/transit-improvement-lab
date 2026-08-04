@@ -48,6 +48,11 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
+
+# Project-specific
+node_modules/
+.env
+.DS_Store
 .pytest_cache/
 cover/
 
@@ -60,6 +65,10 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+
+# Transit Improvement Lab: generated SQLite database (regenerate with
+# backend/scripts/seed_db.py)
+backend/transit_lab.db
 
 # Flask stuff:
 instance/
