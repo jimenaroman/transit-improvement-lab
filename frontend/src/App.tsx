@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import { fetchRouteComparison, fetchRoutes } from './api'
-import type { RouteComparison, RouteScenario } from './types'
+import { fetchDashboardSummary, fetchRouteComparison, fetchRoutes } from './api'
+import type { DashboardSummary, RouteComparison, RouteScenario } from './types'
 
 interface TimeBurden {
   label: string
@@ -45,10 +45,21 @@ function App() {
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [comparisonLoading, setComparisonLoading] = useState(false)
 
+  const [dashboard, setDashboard] = useState<DashboardSummary | null>(null)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(true)
+
   useEffect(() => {
     fetchRoutes()
       .then(setRoutes)
       .catch((err: Error) => setRoutesError(err.message))
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardSummary()
+      .then(setDashboard)
+      .catch((err: Error) => setDashboardError(err.message))
+      .finally(() => setDashboardLoading(false))
   }, [])
 
   const cities = useMemo(
@@ -160,6 +171,87 @@ function App() {
               {comparisonLoading ? 'Analyzing…' : 'Analyze route'}
             </button>
           </div>
+        )}
+      </section>
+
+      <section className="dashboard">
+        <h2>Dashboard</h2>
+        {dashboardLoading && <p>Loading dashboard…</p>}
+        {dashboardError && <p className="error">{dashboardError}</p>}
+        {dashboard && (
+          <>
+            <div className="dashboard-stats">
+              <div className="stat-card">
+                <span className="stat-label">Total routes</span>
+                <span className="stat-value">{dashboard.total_routes}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Average transit penalty</span>
+                <span className="stat-value">{dashboard.average_transit_penalty}×</span>
+              </div>
+            </div>
+
+            <div className="dashboard-columns">
+              <div className="dashboard-block">
+                <h3>Average transit penalty by city</h3>
+                <ul>
+                  {dashboard.average_transit_penalty_by_city.map((entry) => (
+                    <li key={entry.city}>
+                      {entry.city}: {entry.average_transit_penalty}×
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="dashboard-block">
+                <h3>Average wait/transfer minutes by city</h3>
+                <ul>
+                  {dashboard.average_wait_transfer_minutes_by_city.map((entry) => (
+                    <li key={entry.city}>
+                      {entry.city}: {entry.average_wait_transfer_minutes} min
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="dashboard-columns">
+              {dashboard.worst_route_by_transit_penalty && (
+                <div className="dashboard-block">
+                  <h3>Worst route by transit penalty</h3>
+                  <p>
+                    {dashboard.worst_route_by_transit_penalty.city}:{' '}
+                    {dashboard.worst_route_by_transit_penalty.origin_label} →{' '}
+                    {dashboard.worst_route_by_transit_penalty.destination_label}
+                  </p>
+                  <p>{dashboard.worst_route_by_transit_penalty.transit_penalty}× transit penalty</p>
+                </div>
+              )}
+
+              {dashboard.worst_route_by_wait_transfer_minutes && (
+                <div className="dashboard-block">
+                  <h3>Worst route by wait/transfer time</h3>
+                  <p>
+                    {dashboard.worst_route_by_wait_transfer_minutes.city}:{' '}
+                    {dashboard.worst_route_by_wait_transfer_minutes.origin_label} →{' '}
+                    {dashboard.worst_route_by_wait_transfer_minutes.destination_label}
+                  </p>
+                  <p>{dashboard.worst_route_by_wait_transfer_minutes.wait_transfer_minutes} min wait/transfer</p>
+                </div>
+              )}
+            </div>
+
+            <div className="dashboard-block">
+              <h3>Routes by category</h3>
+              <ul>
+                {dashboard.route_count_by_category.map((entry) => (
+                  <li key={entry.route_category}>
+                    {entry.route_category}: {entry.count}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
       </section>
 

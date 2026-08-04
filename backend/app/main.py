@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.dashboard import router as dashboard_router
 from app.routes.route_scenarios import router as route_scenarios_router
 
 
@@ -25,3 +26,4 @@ def health_check() -> dict[str, str]:
 
 
 app.include_router(route_scenarios_router)
+app.include_router(dashboard_router)

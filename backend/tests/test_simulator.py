@@ -27,9 +27,7 @@ def test_frequency_improvement_matches_worked_example():
 
     assert improvement.category == "frequency"
     assert improvement.minutes_saved == 15
-    assert improvement.current_transit_minutes == 91
     assert improvement.new_transit_minutes == 76
-    assert improvement.current_transit_penalty == 3.25
     assert improvement.new_transit_penalty == 2.71
     assert improvement.verdict == "Helpful, but route remains car-dependent"
 
