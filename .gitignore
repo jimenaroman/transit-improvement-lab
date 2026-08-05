@@ -70,6 +70,10 @@ db.sqlite3-journal
 # backend/scripts/seed_db.py)
 backend/transit_lab.db
 
+# Transit Improvement Lab: downloaded GTFS feed zips (re-downloadable, not source)
+data/gtfs/*.zip
+data/gtfs/**/*.zip
+
 # Flask stuff:
 instance/
 .webassets-cache
