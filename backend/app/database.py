@@ -12,7 +12,7 @@ through the repository functions.
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Generator
 
 DB_PATH = Path(__file__).resolve().parents[1] / "transit_lab.db"
 
@@ -38,9 +38,96 @@ CREATE TABLE IF NOT EXISTS trip_scenarios (
 );
 """
 
+# GTFS (General Transit Feed Specification) static schedule tables. Every
+# table carries agency_source ("CTA", "DART", ...) so more than one agency's
+# data can live side by side, and scripts/import_gtfs.py can safely clear
+# and re-import just one agency at a time without touching the others.
+# These columns are a subset of the real GTFS spec — enough for the first
+# import spike, not the full field list every agency publishes.
+CREATE_GTFS_TABLES = [
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_agencies (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      agency_id TEXT,
+      agency_name TEXT,
+      agency_url TEXT,
+      agency_timezone TEXT
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_routes (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      route_id TEXT NOT NULL,
+      agency_id TEXT,
+      route_short_name TEXT,
+      route_long_name TEXT,
+      route_type TEXT
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_stops (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      stop_id TEXT NOT NULL,
+      stop_name TEXT,
+      stop_lat REAL,
+      stop_lon REAL
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_trips (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      trip_id TEXT NOT NULL,
+      route_id TEXT,
+      service_id TEXT,
+      trip_headsign TEXT,
+      direction_id TEXT
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_stop_times (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      trip_id TEXT NOT NULL,
+      stop_id TEXT NOT NULL,
+      arrival_time TEXT,
+      departure_time TEXT,
+      stop_sequence INTEGER
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_calendar (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      service_id TEXT NOT NULL,
+      monday INTEGER,
+      tuesday INTEGER,
+      wednesday INTEGER,
+      thursday INTEGER,
+      friday INTEGER,
+      saturday INTEGER,
+      sunday INTEGER,
+      start_date TEXT,
+      end_date TEXT
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_calendar_dates (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      service_id TEXT NOT NULL,
+      date TEXT,
+      exception_type TEXT
+    );
+    """,
+]
+
 
 @contextmanager
-def get_connection() -> Iterator[sqlite3.Connection]:
+def get_connection() -> Generator[sqlite3.Connection, None, None]:
     """
     Opens a connection, yields it, then commits and closes it.
 
@@ -57,6 +144,8 @@ def get_connection() -> Iterator[sqlite3.Connection]:
 
 
 def init_db() -> None:
-    """Creates the trip_scenarios table if it doesn't already exist."""
+    """Creates the trip_scenarios and gtfs_* tables if they don't already exist."""
     with get_connection() as connection:
         connection.execute(CREATE_TRIP_SCENARIOS_TABLE)
+        for create_table_statement in CREATE_GTFS_TABLES:
+            connection.execute(create_table_statement)
