@@ -36,10 +36,27 @@ export interface CurrentRouteMetrics {
   emissions_saved_kg: number
 }
 
+export interface GtfsServiceContext {
+  agency_source: string
+  route_id: string
+  route_short_name: string | null
+  route_long_name: string | null
+  role: string | null
+  service_date: string
+  average_headway_minutes: number | null
+  peak_headway_minutes: number | null
+  midday_headway_minutes: number | null
+  evening_headway_minutes: number | null
+  service_span_hours: number | null
+  frequency_classification: string
+  explanation: string
+}
+
 export interface RouteComparison {
   route: RouteScenario
   current_metrics: CurrentRouteMetrics
   recommended_improvement: RecommendedImprovement
+  gtfs_service_context: GtfsServiceContext[]
 }
 
 export interface CityTransitPenalty {

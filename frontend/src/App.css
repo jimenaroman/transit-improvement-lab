@@ -194,3 +194,22 @@
 .comparison dd {
   margin: 0;
 }
+
+.gtfs-service-card {
+  border: 2px solid var(--border, #ddd);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.gtfs-service-card:last-child {
+  margin-bottom: 0;
+}
+
+.gtfs-service-name {
+  font-weight: 600;
+}
+
+.gtfs-service-explanation {
+  color: var(--text-h, #888);
+}

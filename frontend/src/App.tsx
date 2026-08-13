@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { fetchDashboardSummary, fetchRouteComparison, fetchRoutes } from './api'
-import type { DashboardSummary, RouteComparison, RouteScenario } from './types'
+import type { DashboardSummary, GtfsServiceContext, RouteComparison, RouteScenario } from './types'
 
 interface TimeBurden {
   label: string
@@ -29,6 +29,25 @@ function getMainTimeBurden(comparison: RouteComparison): TimeBurden | null {
     default:
       return null
   }
+}
+
+function formatRouteName(context: GtfsServiceContext): string {
+  if (context.route_short_name && context.route_long_name) {
+    return `${context.route_short_name} — ${context.route_long_name}`
+  }
+  return context.route_long_name || context.route_short_name || context.route_id
+}
+
+function formatMinutes(value: number | null): string {
+  return value === null ? '—' : `${value} min`
+}
+
+function formatHours(value: number | null): string {
+  return value === null ? '—' : `${value} hr`
+}
+
+function capitalize(value: string): string {
+  return value.length === 0 ? value : value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 const ALL_CITIES = 'All'
@@ -294,6 +313,30 @@ function App() {
                 <h3>Verdict</h3>
                 <p>{comparison.recommended_improvement.verdict}</p>
                 <p>{comparison.recommended_improvement.explanation}</p>
+              </div>
+
+              <div className="comparison-block">
+                <h3>Scheduled transit service</h3>
+                {comparison.gtfs_service_context.length === 0 ? (
+                  <p>No verified GTFS route association yet.</p>
+                ) : (
+                  comparison.gtfs_service_context.map((context) => (
+                    <div
+                      key={`${context.agency_source}-${context.route_id}`}
+                      className="gtfs-service-card"
+                    >
+                      <p className="gtfs-service-name">
+                        {context.agency_source} {formatRouteName(context)}
+                      </p>
+                      <p>Average headway: {formatMinutes(context.average_headway_minutes)}</p>
+                      <p>Frequency: {capitalize(context.frequency_classification)}</p>
+                      <p>Service span: {formatHours(context.service_span_hours)}</p>
+                      <p className="gtfs-service-explanation">
+                        <strong>Service context:</strong> {context.explanation}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </>
           )}
