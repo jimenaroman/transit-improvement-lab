@@ -43,3 +43,28 @@ class GtfsRouteServiceSummary(BaseModel):
     peak_headway_minutes: float | None
     midday_headway_minutes: float | None
     evening_headway_minutes: float | None
+    service_span_hours: float | None
+    frequency_classification: str
+
+
+class GtfsServiceContext(BaseModel):
+    """
+    Real scheduled-service evidence for one GTFS route manually linked to
+    a trip_scenarios row (see trip_scenario_gtfs_routes). Attached to
+    GET /api/routes/{route_id}/comparison responses -- see schemas.py's
+    RouteComparison.
+    """
+
+    agency_source: str
+    route_id: str
+    route_short_name: str | None
+    route_long_name: str | None
+    role: str | None
+    service_date: str
+    average_headway_minutes: float | None
+    peak_headway_minutes: float | None
+    midday_headway_minutes: float | None
+    evening_headway_minutes: float | None
+    service_span_hours: float | None
+    frequency_classification: str
+    explanation: str

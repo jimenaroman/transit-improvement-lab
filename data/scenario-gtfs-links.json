@@ -1,0 +1,59 @@
+[
+  {
+    "scenario_id": 2,
+    "_scenario": "Bishop Arts -> Downtown Dallas",
+    "routes": [
+      { "agency_source": "DART", "route_id": "27243", "role": "primary", "_name": "620 DALLAS STREETCAR" }
+    ]
+  },
+  {
+    "scenario_id": 4,
+    "_scenario": "Richardson -> Downtown Dallas",
+    "routes": [
+      { "agency_source": "DART", "route_id": "27254", "role": "primary", "_name": "RED - DART LIGHT RAIL - RED LINE" }
+    ]
+  },
+  {
+    "scenario_id": 5,
+    "_scenario": "Dallas suburb -> DFW Airport",
+    "routes": [
+      { "agency_source": "DART", "route_id": "27253", "role": "destination_leg", "_name": "ORANGE - DART LIGHT RAIL - ORANGE LINE" }
+    ]
+  },
+  {
+    "scenario_id": 7,
+    "_scenario": "Hyde Park -> The Loop",
+    "routes": [
+      { "agency_source": "CTA", "route_id": "6", "role": "primary", "_name": "6 - Jackson Park Express" }
+    ]
+  },
+  {
+    "scenario_id": 8,
+    "_scenario": "Chinatown -> The Loop",
+    "routes": [
+      { "agency_source": "CTA", "route_id": "Red", "role": "primary", "_name": "Red Line" }
+    ]
+  },
+  {
+    "scenario_id": 9,
+    "_scenario": "Pilsen -> The Loop",
+    "routes": [
+      { "agency_source": "CTA", "route_id": "Pink", "role": "primary", "_name": "Pink Line" }
+    ]
+  },
+  {
+    "scenario_id": 10,
+    "_scenario": "Hyde Park -> O'Hare Airport",
+    "routes": [
+      { "agency_source": "CTA", "route_id": "6", "role": "origin_leg", "_name": "6 - Jackson Park Express" },
+      { "agency_source": "CTA", "route_id": "Blue", "role": "destination_leg", "_name": "Blue Line" }
+    ]
+  },
+  {
+    "scenario_id": 11,
+    "_scenario": "Logan Square -> The Loop",
+    "routes": [
+      { "agency_source": "CTA", "route_id": "Blue", "role": "primary", "_name": "Blue Line" }
+    ]
+  }
+]

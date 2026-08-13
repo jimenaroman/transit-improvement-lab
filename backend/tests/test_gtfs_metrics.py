@@ -116,6 +116,103 @@ def test_departures_outside_all_named_windows_still_count_toward_trip_count():
     assert summary["evening_headway_minutes"] is None
 
 
+def test_service_span_hours_normal_range():
+    summary = calculate_service_summary(["06:00:00", "22:00:00"])
+
+    assert summary["service_span_hours"] == 16.0
+
+
+def test_service_span_hours_spans_past_midnight():
+    # 06:00 to 25:30 (1:30am the next service day) = 19.5 hours.
+    summary = calculate_service_summary(["06:00:00", "25:30:00"])
+
+    assert summary["service_span_hours"] == 19.5
+
+
+def test_service_span_hours_null_when_no_departures():
+    # Both first_departure_time and last_departure_time are unavailable
+    # together -- there's no scenario with only one missing, since both
+    # come from the same (empty) list.
+    summary = calculate_service_summary([])
+
+    assert summary["first_departure_time"] is None
+    assert summary["last_departure_time"] is None
+    assert summary["service_span_hours"] is None
+
+
+def test_service_span_hours_zero_for_single_departure():
+    summary = calculate_service_summary(["09:00:00"])
+
+    assert summary["first_departure_time"] == summary["last_departure_time"] == "09:00:00"
+    assert summary["service_span_hours"] == 0.0
+
+
+def test_frequency_classification_frequent():
+    # Two departures 15 minutes apart -> average headway exactly 15.0.
+    summary = calculate_service_summary(["09:00:00", "09:15:00"])
+
+    assert summary["average_headway_minutes"] == 15.0
+    assert summary["frequency_classification"] == "frequent"
+
+
+def test_frequency_classification_moderate():
+    # Two departures 20 minutes apart -> average headway 20.0, in (15, 30].
+    summary = calculate_service_summary(["09:00:00", "09:20:00"])
+
+    assert summary["average_headway_minutes"] == 20.0
+    assert summary["frequency_classification"] == "moderate"
+
+
+def test_frequency_classification_infrequent():
+    # Two departures 45 minutes apart -> average headway 45.0, > 30.
+    summary = calculate_service_summary(["09:00:00", "09:45:00"])
+
+    assert summary["average_headway_minutes"] == 45.0
+    assert summary["frequency_classification"] == "infrequent"
+
+
+def test_frequency_classification_minimal_when_no_departures():
+    summary = calculate_service_summary([])
+
+    assert summary["average_headway_minutes"] is None
+    assert summary["frequency_classification"] == "minimal"
+
+
+def test_frequency_classification_minimal_when_one_departure():
+    # A single departure also has a null average headway (no gap to
+    # measure), so it's "minimal" too, not "frequent" by some default.
+    summary = calculate_service_summary(["09:00:00"])
+
+    assert summary["average_headway_minutes"] is None
+    assert summary["frequency_classification"] == "minimal"
+
+
+def test_frequency_classification_boundary_exactly_15_is_frequent():
+    summary = calculate_service_summary(["09:00:00", "09:15:00"])
+
+    assert summary["frequency_classification"] == "frequent"
+
+
+def test_frequency_classification_boundary_just_over_15_is_moderate():
+    summary = calculate_service_summary(["09:00:00", "09:16:00"])
+
+    assert summary["average_headway_minutes"] == 16.0
+    assert summary["frequency_classification"] == "moderate"
+
+
+def test_frequency_classification_boundary_exactly_30_is_moderate():
+    summary = calculate_service_summary(["09:00:00", "09:30:00"])
+
+    assert summary["frequency_classification"] == "moderate"
+
+
+def test_frequency_classification_boundary_just_over_30_is_infrequent():
+    summary = calculate_service_summary(["09:00:00", "09:31:00"])
+
+    assert summary["average_headway_minutes"] == 31.0
+    assert summary["frequency_classification"] == "infrequent"
+
+
 def test_resolve_service_date_uses_explicit_date_when_given():
     explicit = date(2026, 8, 11)
 

@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.gtfs_schemas import GtfsServiceContext
+
 
 class RouteScenario(BaseModel):
     id: int
@@ -43,6 +45,13 @@ class RouteComparison(BaseModel):
     route: RouteScenario
     current_metrics: CurrentRouteMetrics
     recommended_improvement: RecommendedImprovement
+    # Real GTFS scheduled-service evidence for any GTFS routes manually
+    # linked to this scenario (trip_scenario_gtfs_routes). Empty list for
+    # scenarios with no link -- see route_scenarios.py. This is the one
+    # deliberate import from gtfs_schemas.py into this otherwise separate
+    # schema file: the whole point of this field is to bridge the two
+    # domains, not an accidental mixing of concerns.
+    gtfs_service_context: list[GtfsServiceContext]
 
 
 class CityTransitPenalty(BaseModel):

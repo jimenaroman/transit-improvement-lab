@@ -146,6 +146,8 @@ def test_service_summary_returns_200_with_calculated_fields(seeded_gtfs_with_dep
     assert body["peak_headway_minutes"] == 15.0
     assert body["midday_headway_minutes"] is None
     assert body["evening_headway_minutes"] is None
+    assert body["service_span_hours"] == 0.2  # 08:00 to 08:15 (0.25 hr, rounded to 1 decimal place)
+    assert body["frequency_classification"] == "frequent"
 
 
 def test_service_summary_unknown_route_returns_404(seeded_gtfs_with_departures):
@@ -293,6 +295,8 @@ def test_service_summary_no_active_service_returns_clean_empty_result(seeded_gtf
     assert body["peak_headway_minutes"] is None
     assert body["midday_headway_minutes"] is None
     assert body["evening_headway_minutes"] is None
+    assert body["service_span_hours"] is None
+    assert body["frequency_classification"] == "minimal"
 
 
 def test_service_summary_multiple_inactive_services_do_not_affect_result(seeded_gtfs_weekday_vs_weekend):

@@ -30,6 +30,20 @@ PEAK_WINDOWS_MINUTES = [(7 * 60, 9 * 60), (16 * 60, 18 * 60)]  # 07:00-09:00 and
 MIDDAY_WINDOWS_MINUTES = [(9 * 60, 15 * 60)]  # 09:00-15:00
 EVENING_WINDOWS_MINUTES = [(18 * 60, 22 * 60)]  # 18:00-22:00
 
+# Frequency classification thresholds, from docs/service-quality-metrics.md.
+# Not derived from this app's own data — this mirrors a widely-used transit
+# industry convention (many US agencies define a "frequent network" as
+# headways of 15 minutes or better all day). Document changes to these in
+# that file, not just here.
+FREQUENT_HEADWAY_MAX_MINUTES = 15
+MODERATE_HEADWAY_MAX_MINUTES = 30
+
+# Used only by explain_service_quality() below. Not documented elsewhere
+# yet -- this app's own working assumption, not an external standard:
+# routes running less than half a day are meaningfully more restricted
+# than routes spanning a typical 5am-1am urban service day.
+SHORT_SERVICE_SPAN_HOURS = 12
+
 
 def resolve_service_date(requested_date: date | None, agency_timezone: str | None) -> date:
     """
@@ -126,23 +140,91 @@ def _headway_within_windows(sorted_minutes: list[int], windows: list[tuple[int, 
     return round(sum(all_gaps) / len(all_gaps), 1)
 
 
+def _service_span_hours(sorted_minutes: list[int]) -> float | None:
+    """
+    Hours from first to last departure. 0.0 for exactly one departure
+    (first equals last); None only when there are zero departures.
+
+    This differs from _average_gap's "None if fewer than 2 values" rule on
+    purpose: span measures a range, which is well-defined even for a
+    single point, while headway measures a gap between two points, which
+    requires two points to exist at all.
+    """
+    if not sorted_minutes:
+        return None
+
+    return round((sorted_minutes[-1] - sorted_minutes[0]) / 60, 1)
+
+
+def _classify_frequency(average_headway_minutes: float | None) -> str:
+    """
+    Labels average headway per the thresholds in
+    docs/service-quality-metrics.md. A None average (fewer than 2
+    departures to measure a gap from) is "minimal", kept distinct from
+    "infrequent" — no measurable service is a different situation from
+    service that just runs rarely.
+    """
+    if average_headway_minutes is None:
+        return "minimal"
+    if average_headway_minutes <= FREQUENT_HEADWAY_MAX_MINUTES:
+        return "frequent"
+    if average_headway_minutes <= MODERATE_HEADWAY_MAX_MINUTES:
+        return "moderate"
+    return "infrequent"
+
+
 def calculate_service_summary(departure_time_strings: list[str]) -> dict:
     """
-    Computes trip_count, first/last departure, and headway figures from a
-    list of raw GTFS departure-time strings. Doesn't know about routes,
-    agencies, or calendar dates — those are the caller's job to attach.
+    Computes trip_count, first/last departure, headway figures, service
+    span, and a frequency label from a list of raw GTFS departure-time
+    strings. Doesn't know about routes, agencies, or calendar dates —
+    those are the caller's job to attach.
     """
     departure_minutes = sorted(parse_gtfs_time_to_minutes(time_str) for time_str in departure_time_strings)
 
     first_departure_time = _format_minutes_as_gtfs_time(departure_minutes[0]) if departure_minutes else None
     last_departure_time = _format_minutes_as_gtfs_time(departure_minutes[-1]) if departure_minutes else None
+    average_headway_minutes = _average_gap(departure_minutes)
 
     return {
         "trip_count": len(departure_minutes),
         "first_departure_time": first_departure_time,
         "last_departure_time": last_departure_time,
-        "average_headway_minutes": _average_gap(departure_minutes),
+        "average_headway_minutes": average_headway_minutes,
         "peak_headway_minutes": _headway_within_windows(departure_minutes, PEAK_WINDOWS_MINUTES),
         "midday_headway_minutes": _headway_within_windows(departure_minutes, MIDDAY_WINDOWS_MINUTES),
         "evening_headway_minutes": _headway_within_windows(departure_minutes, EVENING_WINDOWS_MINUTES),
+        "service_span_hours": _service_span_hours(departure_minutes),
+        "frequency_classification": _classify_frequency(average_headway_minutes),
     }
+
+
+def explain_service_quality(frequency_classification: str, service_span_hours: float | None) -> str:
+    """
+    Builds a short, rule-based explanation from already-computed GTFS
+    metrics only -- no new calculation, no composite score. Used for
+    GtfsServiceContext (see route_scenarios.py's comparison endpoint), not
+    the plain /service-summary endpoint.
+
+    Frequency drives the primary observation; a notably short service
+    span (see SHORT_SERVICE_SPAN_HOURS) adds a second one. Rules are
+    intentionally simple and spelled out here rather than hidden behind a
+    score, per docs/service-quality-metrics.md's recommendation against
+    inventing a composite score.
+    """
+    if frequency_classification == "infrequent":
+        observations = ["Low scheduled frequency may contribute to waiting time."]
+    elif frequency_classification == "moderate":
+        observations = ["Moderate scheduled frequency; some waiting time is likely but not severe."]
+    elif frequency_classification == "minimal":
+        observations = ["No reliable scheduled service was found for this date."]
+    else:  # "frequent"
+        observations = [
+            "Scheduled frequency is relatively strong; delay likely comes from transfers, "
+            "walking, or route geometry instead."
+        ]
+
+    if service_span_hours is not None and service_span_hours < SHORT_SERVICE_SPAN_HOURS:
+        observations.append("Limited service span may reduce flexibility outside typical hours.")
+
+    return " ".join(observations)

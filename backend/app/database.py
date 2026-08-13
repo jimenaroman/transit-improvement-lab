@@ -125,6 +125,23 @@ CREATE_GTFS_TABLES = [
     """,
 ]
 
+# Manual, curated association between a trip_scenarios row (the
+# product-level trip shown in route comparisons) and one or more real GTFS
+# routes that provide scheduled-service evidence for it. Seeded by hand
+# from data/scenario-gtfs-links.json -- this app does not infer these
+# geographically. The UNIQUE constraint stops the same scenario/agency/
+# route combination from being linked twice.
+CREATE_TRIP_SCENARIO_GTFS_ROUTES_TABLE = """
+CREATE TABLE IF NOT EXISTS trip_scenario_gtfs_routes (
+  id INTEGER PRIMARY KEY,
+  scenario_id INTEGER NOT NULL,
+  agency_source TEXT NOT NULL,
+  route_id TEXT NOT NULL,
+  role TEXT,
+  UNIQUE(scenario_id, agency_source, route_id)
+);
+"""
+
 
 @contextmanager
 def get_connection() -> Generator[sqlite3.Connection, None, None]:
@@ -144,8 +161,9 @@ def get_connection() -> Generator[sqlite3.Connection, None, None]:
 
 
 def init_db() -> None:
-    """Creates the trip_scenarios and gtfs_* tables if they don't already exist."""
+    """Creates the trip_scenarios, gtfs_*, and association tables if they don't already exist."""
     with get_connection() as connection:
         connection.execute(CREATE_TRIP_SCENARIOS_TABLE)
         for create_table_statement in CREATE_GTFS_TABLES:
             connection.execute(create_table_statement)
+        connection.execute(CREATE_TRIP_SCENARIO_GTFS_ROUTES_TABLE)
