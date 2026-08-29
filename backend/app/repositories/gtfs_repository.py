@@ -32,6 +32,7 @@ GTFS_TABLES = [
     "gtfs_stop_times",
     "gtfs_calendar",
     "gtfs_calendar_dates",
+    "gtfs_shapes",
 ]
 
 
@@ -93,7 +94,7 @@ def insert_stops(rows: Iterable[tuple]) -> int:
 def insert_trips(rows: Iterable[tuple]) -> int:
     return _insert_in_batches(
         "gtfs_trips",
-        ["agency_source", "trip_id", "route_id", "service_id", "trip_headsign", "direction_id"],
+        ["agency_source", "trip_id", "route_id", "service_id", "trip_headsign", "direction_id", "shape_id"],
         rows,
     )
 
@@ -130,6 +131,14 @@ def insert_calendar_dates(rows: Iterable[tuple]) -> int:
     return _insert_in_batches(
         "gtfs_calendar_dates",
         ["agency_source", "service_id", "date", "exception_type"],
+        rows,
+    )
+
+
+def insert_shapes(rows: Iterable[tuple]) -> int:
+    return _insert_in_batches(
+        "gtfs_shapes",
+        ["agency_source", "shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence", "shape_dist_traveled"],
         rows,
     )
 

@@ -12,7 +12,7 @@ import zipfile
 import pytest
 
 from app import database
-from app.repositories import gtfs_repository
+from app.repositories import gtfs_geometry_repository, gtfs_repository
 from scripts.import_gtfs import import_gtfs
 
 AGENCY_TXT = "agency_id,agency_name,agency_url,agency_timezone\n1,Test Transit,http://example.com,America/Chicago\n"
@@ -26,8 +26,15 @@ STOPS_TXT = (
 )
 
 # Deliberately omits trip_headsign, matching CTA's real trips.txt, to check
-# that a missing optional column doesn't crash the import.
-TRIPS_TXT = "route_id,service_id,trip_id,direction_id\nR1,WD,T1,0\n"
+# that a missing optional column doesn't crash the import. shape_id links
+# this trip to SHAPES_TXT below.
+TRIPS_TXT = "route_id,service_id,trip_id,direction_id,shape_id\nR1,WD,T1,0,SHP1\n"
+
+SHAPES_TXT = (
+    "shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled\n"
+    "SHP1,41.80,-87.60,1,0\n"
+    "SHP1,41.85,-87.65,2,0.5\n"
+)
 
 STOP_TIMES_TXT = (
     "trip_id,arrival_time,departure_time,stop_id,stop_sequence\n"
@@ -49,6 +56,7 @@ def _write_test_gtfs_zip(zip_path, include_calendar_dates: bool = False) -> None
         zip_file.writestr("trips.txt", TRIPS_TXT)
         zip_file.writestr("stop_times.txt", STOP_TIMES_TXT)
         zip_file.writestr("calendar.txt", CALENDAR_TXT)
+        zip_file.writestr("shapes.txt", SHAPES_TXT)
         if include_calendar_dates:
             zip_file.writestr("calendar_dates.txt", "service_id,date,exception_type\nWD,20260704,2\n")
 
@@ -71,6 +79,7 @@ def test_import_gtfs_counts_and_stores_rows(temp_db, tmp_path):
         "trips.txt": 1,
         "stop_times.txt": 2,
         "calendar.txt": 1,
+        "shapes.txt": 2,
     }
     assert "calendar_dates.txt" not in counts
 
@@ -81,6 +90,7 @@ def test_import_gtfs_counts_and_stores_rows(temp_db, tmp_path):
     assert gtfs_repository.count_rows("gtfs_stop_times", "CTA") == 2
     assert gtfs_repository.count_rows("gtfs_calendar", "CTA") == 1
     assert gtfs_repository.count_rows("gtfs_calendar_dates", "CTA") == 0
+    assert gtfs_repository.count_rows("gtfs_shapes", "CTA") == 2
 
 
 def test_missing_optional_file_prints_a_warning(temp_db, tmp_path, capsys):
@@ -118,10 +128,13 @@ def test_import_keeps_agencies_separate(temp_db, tmp_path):
     assert gtfs_repository.count_rows("gtfs_stops", "DART") == 2
     assert gtfs_repository.count_rows("gtfs_calendar_dates", "CTA") == 0
     assert gtfs_repository.count_rows("gtfs_calendar_dates", "DART") == 1
+    assert gtfs_repository.count_rows("gtfs_shapes", "CTA") == 2
+    assert gtfs_repository.count_rows("gtfs_shapes", "DART") == 2
 
     # Re-importing DART must not touch CTA's rows.
     import_gtfs("DART", dart_zip)
     assert gtfs_repository.count_rows("gtfs_stops", "CTA") == 2
+    assert gtfs_repository.count_rows("gtfs_shapes", "CTA") == 2
 
 
 def test_missing_trip_headsign_column_does_not_crash(temp_db, tmp_path):
@@ -132,3 +145,39 @@ def test_missing_trip_headsign_column_does_not_crash(temp_db, tmp_path):
     import_gtfs("CTA", zip_path)
 
     assert gtfs_repository.count_rows("gtfs_trips", "CTA") == 1
+
+
+def test_imported_trip_carries_its_shape_id(temp_db, tmp_path):
+    zip_path = tmp_path / "test_feed.zip"
+    _write_test_gtfs_zip(zip_path)
+
+    import_gtfs("CTA", zip_path)
+
+    # TRIPS_TXT's one trip points at SHP1 -- confirms shape_id survived the
+    # trips.txt import and the shape itself was loaded under the same id.
+    assert gtfs_geometry_repository.find_representative_shape_id("CTA", "R1") == "SHP1"
+    points = gtfs_geometry_repository.get_shape_points("CTA", "SHP1")
+    assert [p["shape_pt_sequence"] for p in points] == [1, 2]
+
+
+def test_shape_missing_dist_traveled_imports_as_none(temp_db, tmp_path):
+    zip_path = tmp_path / "test_feed.zip"
+    with zipfile.ZipFile(zip_path, "w") as zip_file:
+        zip_file.writestr("agency.txt", AGENCY_TXT)
+        zip_file.writestr("routes.txt", ROUTES_TXT)
+        zip_file.writestr("stops.txt", STOPS_TXT)
+        zip_file.writestr("trips.txt", TRIPS_TXT)
+        zip_file.writestr("stop_times.txt", STOP_TIMES_TXT)
+        zip_file.writestr("calendar.txt", CALENDAR_TXT)
+        # No shape_dist_traveled column at all, unlike SHAPES_TXT above.
+        zip_file.writestr(
+            "shapes.txt",
+            "shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence\nSHP1,41.80,-87.60,1\n",
+        )
+
+    import_gtfs("CTA", zip_path)
+
+    points = gtfs_geometry_repository.get_shape_points("CTA", "SHP1")
+    assert points == [
+        {"shape_pt_lat": 41.80, "shape_pt_lon": -87.60, "shape_pt_sequence": 1, "shape_dist_traveled": None}
+    ]

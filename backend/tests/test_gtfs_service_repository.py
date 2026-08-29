@@ -43,7 +43,7 @@ def test_get_route_unknown_returns_none(temp_db):
 
 
 def test_get_first_stop_departure_times_filters_by_stop_sequence(temp_db):
-    gtfs_repository.insert_trips([("CTA", "T1", "R1", "WD", "Downtown", "0")])
+    gtfs_repository.insert_trips([("CTA", "T1", "R1", "WD", "Downtown", "0", None)])
     gtfs_repository.insert_stop_times(
         [
             ("CTA", "T1", "S1", "08:00:00", "08:00:00", 1),
@@ -59,8 +59,8 @@ def test_get_first_stop_departure_times_filters_by_stop_sequence(temp_db):
 def test_get_first_stop_departure_times_filters_by_active_service_ids(temp_db):
     gtfs_repository.insert_trips(
         [
-            ("CTA", "T1", "R1", "WD", "Downtown", "0"),
-            ("CTA", "T2", "R1", "SAT", "Downtown", "0"),
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", None),
+            ("CTA", "T2", "R1", "SAT", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(
@@ -91,8 +91,8 @@ def test_same_route_id_across_agencies_does_not_mix(temp_db):
     # purpose -- both are only guaranteed unique within one agency's feed.
     gtfs_repository.insert_trips(
         [
-            ("CTA", "T1", "R1", "WD", "Downtown", "0"),
-            ("DART", "T1", "R1", "WD", "Downtown", "0"),
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", None),
+            ("DART", "T1", "R1", "WD", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(

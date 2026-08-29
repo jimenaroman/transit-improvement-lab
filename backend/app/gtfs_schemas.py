@@ -47,6 +47,28 @@ class GtfsRouteServiceSummary(BaseModel):
     frequency_classification: str
 
 
+class GtfsShapePoint(BaseModel):
+    lat: float
+    lon: float
+    sequence: int
+    dist_traveled: float | None = None
+
+
+class GtfsRouteGeometry(BaseModel):
+    """
+    Real route-line geometry from shapes.txt for one route, or an empty
+    result (shape_id=None, points=[]) if the route has no shape data. Never
+    a straight line or invented coordinates -- see
+    gtfs_geometry_repository.find_representative_shape_id for how one
+    shape is picked when a route has more than one.
+    """
+
+    agency_source: str
+    route_id: str
+    shape_id: str | None
+    points: list[GtfsShapePoint]
+
+
 class GtfsServiceContext(BaseModel):
     """
     Real scheduled-service evidence for one GTFS route manually linked to

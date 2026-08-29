@@ -28,9 +28,9 @@ def seeded_gtfs(tmp_path, monkeypatch):
     )
     gtfs_repository.insert_trips(
         [
-            ("CTA", "T1", "R1", "WD", "Downtown", "0"),
-            ("CTA", "T2", "R1", "WD", "Downtown", "0"),
-            ("CTA", "T3", "R2", "WD", "O'Hare", "0"),
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", None),
+            ("CTA", "T2", "R1", "WD", "Downtown", "0", None),
+            ("CTA", "T3", "R2", "WD", "O'Hare", "0", None),
         ]
     )
 
@@ -117,8 +117,8 @@ def seeded_gtfs_with_departures(tmp_path, monkeypatch):
     gtfs_repository.insert_calendar([("CTA", "WD", 1, 1, 1, 1, 1, 1, 1, "20200101", "20301231")])
     gtfs_repository.insert_trips(
         [
-            ("CTA", "T1", "R1", "WD", "Downtown", "0"),
-            ("CTA", "T2", "R1", "WD", "Downtown", "0"),
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", None),
+            ("CTA", "T2", "R1", "WD", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(
@@ -208,8 +208,8 @@ def seeded_gtfs_weekday_vs_weekend(tmp_path, monkeypatch):
     )
     gtfs_repository.insert_trips(
         [
-            ("CTA", "T1", "R1", "WD", "Downtown", "0"),
-            ("CTA", "T2", "R1", "SAT", "Downtown", "0"),
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", None),
+            ("CTA", "T2", "R1", "SAT", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(
@@ -247,7 +247,7 @@ def test_service_summary_saturday_uses_only_weekend_service(seeded_gtfs_weekday_
 def test_service_summary_calendar_dates_addition(seeded_gtfs_weekday_vs_weekend):
     # Add a one-off "SPECIAL" trip via calendar_dates for a Tuesday that
     # otherwise only has "WD" active.
-    gtfs_repository.insert_trips([("CTA", "T3", "R1", "SPECIAL", "Downtown", "0")])
+    gtfs_repository.insert_trips([("CTA", "T3", "R1", "SPECIAL", "Downtown", "0", None)])
     gtfs_repository.insert_stop_times([("CTA", "T3", "S1", "12:00:00", "12:00:00", 1)])
     gtfs_repository.insert_calendar_dates([("CTA", "SPECIAL", "20260811", "1")])
 
@@ -303,7 +303,7 @@ def test_service_summary_multiple_inactive_services_do_not_affect_result(seeded_
     # Add a third, unrelated service pattern that never matches the
     # requested Tuesday and has no calendar_dates exception either.
     gtfs_repository.insert_calendar([("CTA", "SUN", 0, 0, 0, 0, 0, 0, 1, "20200101", "20301231")])
-    gtfs_repository.insert_trips([("CTA", "T3", "R1", "SUN", "Downtown", "0")])
+    gtfs_repository.insert_trips([("CTA", "T3", "R1", "SUN", "Downtown", "0", None)])
     gtfs_repository.insert_stop_times([("CTA", "T3", "S1", "11:00:00", "11:00:00", 1)])
 
     response = client.get("/api/gtfs/agencies/CTA/routes/R1/service-summary?date=2026-08-11")
@@ -331,8 +331,8 @@ def test_service_summary_same_route_id_across_agencies_does_not_mix(tmp_path, mo
     )
     gtfs_repository.insert_trips(
         [
-            ("CTA", "T1", "R1", "WD", "Downtown", "0"),
-            ("DART", "T1", "R1", "WD", "Downtown", "0"),
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", None),
+            ("DART", "T1", "R1", "WD", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(
@@ -349,3 +349,111 @@ def test_service_summary_same_route_id_across_agencies_does_not_mix(tmp_path, mo
     assert cta_response["first_departure_time"] == "08:00:00"
     assert dart_response["route_long_name"] == "DART Red Line"
     assert dart_response["first_departure_time"] == "09:30:00"
+
+
+@pytest.fixture
+def seeded_gtfs_with_shapes(tmp_path, monkeypatch):
+    monkeypatch.setattr(database, "DB_PATH", tmp_path / "geometry.db")
+    database.init_db()
+    gtfs_repository.insert_routes(
+        [
+            ("CTA", "R1", "1", "1", "Red Line", "1"),
+            ("CTA", "R2", "1", "2", "No Shape Line", "1"),
+            ("DART", "R1", "1", "1", "Dallas Red Line", "2"),
+        ]
+    )
+    gtfs_repository.insert_trips(
+        [
+            ("CTA", "T1", "R1", "WD", "Downtown", "0", "SHP1"),
+            ("CTA", "T2", "R2", "WD", "Downtown", "0", None),  # no shape_id at all
+            ("DART", "T1", "R1", "WD", "Downtown", "0", "SHP1"),  # same shape_id text as CTA, different agency
+        ]
+    )
+    gtfs_repository.insert_shapes(
+        [
+            ("CTA", "SHP1", 41.80, -87.70, 2, 100.0),
+            ("CTA", "SHP1", 41.75, -87.75, 1, 0.0),  # inserted out of order on purpose
+            ("DART", "SHP1", 32.80, -96.80, 1, None),  # no shape_dist_traveled for DART's feed
+        ]
+    )
+
+
+def test_geometry_endpoint_returns_ordered_points(seeded_gtfs_with_shapes):
+    response = client.get("/api/gtfs/agencies/CTA/routes/R1/geometry")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agency_source"] == "CTA"
+    assert body["route_id"] == "R1"
+    assert body["shape_id"] == "SHP1"
+    assert [p["sequence"] for p in body["points"]] == [1, 2]
+    assert body["points"][0]["lat"] == 41.75
+    assert body["points"][0]["dist_traveled"] == 0.0
+
+
+def test_geometry_endpoint_cta_and_dart_same_shape_id_do_not_mix(seeded_gtfs_with_shapes):
+    cta_response = client.get("/api/gtfs/agencies/CTA/routes/R1/geometry").json()
+    dart_response = client.get("/api/gtfs/agencies/DART/routes/R1/geometry").json()
+
+    assert cta_response["points"][0]["lat"] == 41.75
+    assert dart_response["points"][0]["lat"] == 32.80
+
+
+def test_geometry_endpoint_unknown_route_returns_404(seeded_gtfs_with_shapes):
+    response = client.get("/api/gtfs/agencies/CTA/routes/NOPE/geometry")
+
+    assert response.status_code == 404
+
+
+def test_geometry_endpoint_unknown_agency_returns_404(seeded_gtfs_with_shapes):
+    response = client.get("/api/gtfs/agencies/UNKNOWN/routes/R1/geometry")
+
+    assert response.status_code == 404
+
+
+def test_geometry_endpoint_route_with_no_shape_returns_clean_empty_result(seeded_gtfs_with_shapes):
+    response = client.get("/api/gtfs/agencies/CTA/routes/R2/geometry")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["shape_id"] is None
+    assert body["points"] == []
+
+
+def test_geometry_endpoint_shape_missing_dist_traveled_returns_none(seeded_gtfs_with_shapes):
+    response = client.get("/api/gtfs/agencies/DART/routes/R1/geometry")
+
+    assert response.status_code == 200
+    assert response.json()["points"][0]["dist_traveled"] is None
+
+
+def test_geometry_endpoint_picks_most_used_shape_when_multiple_candidates(seeded_gtfs_with_shapes):
+    # Give R2 two more trips on a second shape (2 trips) plus its existing
+    # untitled/no-shape trip -- SHP_MAIN should win over SHP_MINOR (1 trip).
+    gtfs_repository.insert_trips(
+        [
+            ("CTA", "T3", "R2", "WD", "Downtown", "0", "SHP_MAIN"),
+            ("CTA", "T4", "R2", "WD", "Downtown", "0", "SHP_MAIN"),
+            ("CTA", "T5", "R2", "WD", "Downtown", "0", "SHP_MINOR"),
+        ]
+    )
+    gtfs_repository.insert_shapes(
+        [
+            ("CTA", "SHP_MAIN", 41.0, -87.0, 1, None),
+            ("CTA", "SHP_MINOR", 42.0, -88.0, 1, None),
+        ]
+    )
+
+    response = client.get("/api/gtfs/agencies/CTA/routes/R2/geometry")
+
+    assert response.status_code == 200
+    assert response.json()["shape_id"] == "SHP_MAIN"
+
+
+def test_geometry_endpoint_agency_is_case_insensitive(seeded_gtfs_with_shapes):
+    response = client.get("/api/gtfs/agencies/cta/routes/R1/geometry")
+
+    assert response.status_code == 200
+    # Canonical stored casing ("CTA"), not the lowercase URL the caller used —
+    # same convention service-summary already follows.
+    assert response.json()["agency_source"] == "CTA"

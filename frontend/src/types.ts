@@ -36,6 +36,20 @@ export interface CurrentRouteMetrics {
   emissions_saved_kg: number
 }
 
+export interface GtfsShapePoint {
+  lat: number
+  lon: number
+  sequence: number
+  dist_traveled: number | null
+}
+
+export interface GtfsRouteGeometry {
+  agency_source: string
+  route_id: string
+  shape_id: string | null
+  points: GtfsShapePoint[]
+}
+
 export interface GtfsServiceContext {
   agency_source: string
   route_id: string

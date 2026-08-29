@@ -17,8 +17,14 @@ from datetime import date
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.gtfs_schemas import AgencyGtfsCounts, GtfsRouteServiceSummary, GtfsRouteWithTripCount
-from app.repositories import gtfs_service_repository, gtfs_summary_repository
+from app.gtfs_schemas import (
+    AgencyGtfsCounts,
+    GtfsRouteGeometry,
+    GtfsRouteServiceSummary,
+    GtfsRouteWithTripCount,
+    GtfsShapePoint,
+)
+from app.repositories import gtfs_geometry_repository, gtfs_service_repository, gtfs_summary_repository
 from app.services import gtfs_metrics
 
 router = APIRouter(prefix="/api/gtfs", tags=["gtfs"])
@@ -100,4 +106,49 @@ def get_route_service_summary(
         day_of_week=service_date.strftime("%A"),
         active_service_ids=active_service_ids,
         **metrics,
+    )
+
+
+@router.get(
+    "/agencies/{agency_source}/routes/{route_id}/geometry",
+    response_model=GtfsRouteGeometry,
+)
+def get_route_geometry(agency_source: str, route_id: str) -> GtfsRouteGeometry:
+    """
+    Real route-line geometry from shapes.txt, for the Analyze Trip map.
+
+    404 means the route itself doesn't exist, same convention as
+    service-summary above. A route that exists but has no shape data is a
+    different, non-error case -- it returns 200 with shape_id=None and an
+    empty points list, so the frontend can show a clean "no geometry"
+    state instead of treating it like a failed request.
+    """
+    route = gtfs_service_repository.get_route(agency_source, route_id)
+
+    if route is None:
+        raise HTTPException(status_code=404, detail="Route not found.")
+
+    # Use the canonical agency_source from the stored route (e.g. "CTA"),
+    # not whatever casing the caller used in the URL -- same convention
+    # service-summary above follows via **route.
+    canonical_agency_source = route["agency_source"]
+
+    shape_id = gtfs_geometry_repository.find_representative_shape_id(canonical_agency_source, route_id)
+
+    if shape_id is None:
+        return GtfsRouteGeometry(agency_source=canonical_agency_source, route_id=route_id, shape_id=None, points=[])
+
+    shape_rows = gtfs_geometry_repository.get_shape_points(canonical_agency_source, shape_id)
+    points = [
+        GtfsShapePoint(
+            lat=row["shape_pt_lat"],
+            lon=row["shape_pt_lon"],
+            sequence=row["shape_pt_sequence"],
+            dist_traveled=row["shape_dist_traveled"],
+        )
+        for row in shape_rows
+    ]
+
+    return GtfsRouteGeometry(
+        agency_source=canonical_agency_source, route_id=route_id, shape_id=shape_id, points=points
     )

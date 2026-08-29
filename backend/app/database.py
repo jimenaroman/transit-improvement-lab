@@ -84,7 +84,8 @@ CREATE_GTFS_TABLES = [
       route_id TEXT,
       service_id TEXT,
       trip_headsign TEXT,
-      direction_id TEXT
+      direction_id TEXT,
+      shape_id TEXT
     );
     """,
     """
@@ -123,6 +124,29 @@ CREATE_GTFS_TABLES = [
       exception_type TEXT
     );
     """,
+    # Route-line geometry (shapes.txt). shape_dist_traveled is optional per
+    # the GTFS spec -- not every agency's feed includes it -- so it's
+    # nullable, unlike the required lat/lon/sequence columns.
+    """
+    CREATE TABLE IF NOT EXISTS gtfs_shapes (
+      id INTEGER PRIMARY KEY,
+      agency_source TEXT NOT NULL,
+      shape_id TEXT NOT NULL,
+      shape_pt_lat REAL NOT NULL,
+      shape_pt_lon REAL NOT NULL,
+      shape_pt_sequence INTEGER NOT NULL,
+      shape_dist_traveled REAL
+    );
+    """,
+]
+
+# Indexes supporting the geometry lookup path: gtfs_trips -> candidate
+# shape_ids for a route, then gtfs_shapes -> ordered points for one shape_id.
+CREATE_GTFS_INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_gtfs_shapes_shape_lookup "
+    "ON gtfs_shapes (agency_source, shape_id, shape_pt_sequence);",
+    "CREATE INDEX IF NOT EXISTS idx_gtfs_trips_route_lookup "
+    "ON gtfs_trips (agency_source, route_id, shape_id);",
 ]
 
 # Manual, curated association between a trip_scenarios row (the
@@ -160,6 +184,22 @@ def get_connection() -> Generator[sqlite3.Connection, None, None]:
         connection.close()
 
 
+def _add_column_if_missing(connection: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
+    """
+    Adds `column` to `table` if it isn't already there.
+
+    CREATE TABLE IF NOT EXISTS only helps on a brand-new database file --
+    an existing gtfs_trips table (like the one already checked into a
+    developer's local transit_lab.db) keeps whatever columns it had when it
+    was first created. This lets gtfs_trips.shape_id show up on both a
+    fresh database and one that predates it, without anyone needing to
+    delete their local .db file by hand.
+    """
+    existing_columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in existing_columns:
+        connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+
+
 def init_db() -> None:
     """Creates the trip_scenarios, gtfs_*, and association tables if they don't already exist."""
     with get_connection() as connection:
@@ -167,3 +207,6 @@ def init_db() -> None:
         for create_table_statement in CREATE_GTFS_TABLES:
             connection.execute(create_table_statement)
         connection.execute(CREATE_TRIP_SCENARIO_GTFS_ROUTES_TABLE)
+        _add_column_if_missing(connection, "gtfs_trips", "shape_id", "TEXT")
+        for create_index_statement in CREATE_GTFS_INDEXES:
+            connection.execute(create_index_statement)

@@ -18,5 +18,11 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // shadcn/ui component files pair each component with a cva variants
+      // export (e.g. buttonVariants) in the same file — the standard shape
+      // this option exists for.
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
   },
 ])

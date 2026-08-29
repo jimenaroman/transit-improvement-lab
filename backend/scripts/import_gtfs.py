@@ -30,7 +30,7 @@ from app.database import init_db  # noqa: E402
 from app.repositories import gtfs_repository  # noqa: E402
 
 # The GTFS files this spike knows how to import, in the order we process
-# them. A real feed usually has other files too (shapes.txt, fares, etc.) —
+# them. A real feed usually has other files too (fares, frequencies, etc.) —
 # anything not in this list is simply ignored.
 GTFS_FILENAMES = [
     "agency.txt",
@@ -40,6 +40,7 @@ GTFS_FILENAMES = [
     "stop_times.txt",
     "calendar.txt",
     "calendar_dates.txt",
+    "shapes.txt",
 ]
 
 
@@ -110,6 +111,7 @@ def _import_stops(zip_file: zipfile.ZipFile, filename: str, agency_source: str) 
 def _import_trips(zip_file: zipfile.ZipFile, filename: str, agency_source: str) -> int:
     # Not every agency's trips.txt has trip_headsign (CTA's doesn't) —
     # row.get() returns None instead of raising KeyError for those.
+    # shape_id is likewise optional per the GTFS spec.
     rows = (
         (
             agency_source,
@@ -118,6 +120,7 @@ def _import_trips(zip_file: zipfile.ZipFile, filename: str, agency_source: str) 
             row.get("service_id"),
             row.get("trip_headsign"),
             row.get("direction_id"),
+            row.get("shape_id"),
         )
         for row in _read_csv_rows(zip_file, filename)
     )
@@ -172,6 +175,23 @@ def _import_calendar_dates(zip_file: zipfile.ZipFile, filename: str, agency_sour
     return gtfs_repository.insert_calendar_dates(rows)
 
 
+def _import_shapes(zip_file: zipfile.ZipFile, filename: str, agency_source: str) -> int:
+    # shape_dist_traveled is optional per the GTFS spec (DART's feed has
+    # it, not every agency's does), so _to_float leaves it None if absent.
+    rows = (
+        (
+            agency_source,
+            row.get("shape_id"),
+            _to_float(row.get("shape_pt_lat")),
+            _to_float(row.get("shape_pt_lon")),
+            _to_int(row.get("shape_pt_sequence")),
+            _to_float(row.get("shape_dist_traveled")),
+        )
+        for row in _read_csv_rows(zip_file, filename)
+    )
+    return gtfs_repository.insert_shapes(rows)
+
+
 # Maps each known GTFS filename to the function that imports it.
 _IMPORTERS = {
     "agency.txt": _import_agency,
@@ -181,6 +201,7 @@ _IMPORTERS = {
     "stop_times.txt": _import_stop_times,
     "calendar.txt": _import_calendar,
     "calendar_dates.txt": _import_calendar_dates,
+    "shapes.txt": _import_shapes,
 }
 
 

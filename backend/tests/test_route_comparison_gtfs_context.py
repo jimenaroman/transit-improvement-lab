@@ -51,8 +51,8 @@ def seeded_comparison_data(tmp_path, monkeypatch):
     gtfs_repository.insert_calendar([("CTA", "WD", 1, 1, 1, 1, 1, 1, 1, "20200101", "20301231")])
     gtfs_repository.insert_trips(
         [
-            ("CTA", "CT1", "6", "WD", "Downtown", "0"),
-            ("CTA", "CT2", "6", "WD", "Downtown", "0"),
+            ("CTA", "CT1", "6", "WD", "Downtown", "0", None),
+            ("CTA", "CT2", "6", "WD", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(
@@ -67,8 +67,8 @@ def seeded_comparison_data(tmp_path, monkeypatch):
     gtfs_repository.insert_calendar([("DART", "WD", 1, 1, 1, 1, 1, 1, 1, "20200101", "20301231")])
     gtfs_repository.insert_trips(
         [
-            ("DART", "DT1", "27243", "WD", "Downtown", "0"),
-            ("DART", "DT2", "27243", "WD", "Downtown", "0"),
+            ("DART", "DT1", "27243", "WD", "Downtown", "0", None),
+            ("DART", "DT2", "27243", "WD", "Downtown", "0", None),
         ]
     )
     gtfs_repository.insert_stop_times(
@@ -127,7 +127,7 @@ def test_explicit_date_propagates_into_gtfs_calculations(seeded_comparison_data)
     # the always-on "WD" pattern for that one Tuesday -- so the date
     # actually changes which trips are active, not just the label.
     gtfs_repository.insert_calendar([("CTA", "TUE_ONLY", 0, 1, 0, 0, 0, 0, 0, "20200101", "20301231")])
-    gtfs_repository.insert_trips([("CTA", "CT3", "6", "TUE_ONLY", "Downtown", "0")])
+    gtfs_repository.insert_trips([("CTA", "CT3", "6", "TUE_ONLY", "Downtown", "0", None)])
     gtfs_repository.insert_stop_times([("CTA", "CT3", "S1", "09:00:00", "09:00:00", 1)])
     gtfs_repository.insert_calendar_dates([("CTA", "WD", "20260811", "2")])
 
