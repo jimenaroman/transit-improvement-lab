@@ -147,6 +147,10 @@ CREATE_GTFS_INDEXES = [
     "ON gtfs_shapes (agency_source, shape_id, shape_pt_sequence);",
     "CREATE INDEX IF NOT EXISTS idx_gtfs_trips_route_lookup "
     "ON gtfs_trips (agency_source, route_id, shape_id);",
+    # Without this, get_first_stop_departure_times() full-scans
+    # gtfs_stop_times (5.8M rows for CTA) instead of seeking by trip_id.
+    "CREATE INDEX IF NOT EXISTS idx_gtfs_stop_times_trip_lookup "
+    "ON gtfs_stop_times (agency_source, trip_id, stop_sequence);",
 ]
 
 # Manual, curated association between a trip_scenarios row (the

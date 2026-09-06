@@ -34,6 +34,62 @@ def get_route(agency_source: str, route_id: str) -> dict | None:
     return dict(row) if row is not None else None
 
 
+def get_agency_source_by_name(agency_name: str) -> str | None:
+    """
+    Maps an agency display name (e.g. Google Routes' transitLine.agencies[].name)
+    to this app's agency_source label, by matching against our own imported
+    gtfs_agencies.agency_name -- both ultimately come from the same
+    published GTFS agency.txt, so this stays correct without hardcoding a
+    guessed string. Returns None for any agency we haven't imported.
+    """
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT agency_source FROM gtfs_agencies WHERE LOWER(agency_name) = LOWER(?) LIMIT 1",
+            (agency_name,),
+        ).fetchone()
+
+    return row["agency_source"] if row is not None else None
+
+
+def find_candidate_routes_by_name(
+    agency_source: str, route_short_name: str | None, route_long_name: str | None
+) -> list[dict]:
+    """
+    Returns every gtfs_routes row in one agency matching by short name
+    (preferred) or long name (fallback) -- raw candidates only. Deciding
+    "exactly one match" vs. "ambiguous, don't guess" is a caller concern,
+    not this repository's; see docs/google-routes-integration.md section 6.
+    """
+    if not route_short_name and not route_long_name:
+        return []
+
+    with get_connection() as connection:
+        if route_short_name:
+            rows = connection.execute(
+                """
+                SELECT agency_source, route_id, route_short_name, route_long_name, route_type
+                FROM gtfs_routes
+                WHERE LOWER(agency_source) = LOWER(?) AND LOWER(route_short_name) = LOWER(?)
+                """,
+                (agency_source, route_short_name),
+            ).fetchall()
+            if rows:
+                return [dict(row) for row in rows]
+
+        if route_long_name:
+            rows = connection.execute(
+                """
+                SELECT agency_source, route_id, route_short_name, route_long_name, route_type
+                FROM gtfs_routes
+                WHERE LOWER(agency_source) = LOWER(?) AND LOWER(route_long_name) = LOWER(?)
+                """,
+                (agency_source, route_long_name),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    return []
+
+
 def get_first_stop_departure_times(agency_source: str, route_id: str, active_service_ids: list[str]) -> list[str]:
     """
     Returns the raw GTFS departure_time string ("HH:MM:SS", possibly past
