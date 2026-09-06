@@ -11,7 +11,7 @@ FastAPI endpoints only.
 - Return the response — FastAPI serializes it via `response_model`.
 - No SQL. No business logic or calculations. No file I/O.
 
-Examples: `route_scenarios.py`, `dashboard.py`, `gtfs.py`.
+Examples: `route_scenarios.py`, `dashboard.py`, `gtfs.py`, `trips.py`.
 
 ## `backend/app/repositories/`
 
@@ -24,6 +24,24 @@ Database access only.
 
 Examples: `route_repository.py`, `dashboard_repository.py`, `gtfs_repository.py`, `gtfs_summary_repository.py`.
 
+## `backend/app/clients/`
+
+External API clients only.
+
+- Wraps outbound HTTP calls to third-party services (e.g. Google Routes) via `httpx`.
+- Returns parsed JSON (`dict`) or raises a typed exception on failure/timeout/malformed response — never a normalized app model. Normalization is a service-layer concern (see below).
+- No SQL, no FastAPI request/response objects, no business logic or scoring.
+- Reads secrets (API keys) via `app/config.py` only. Never logs a secret, never includes one in an exception message.
+
+Examples: `google_routes_client.py`.
+
+## `backend/app/config.py`
+
+Environment variable loading only.
+
+- Loads `.env` (via `python-dotenv`) and exposes typed getters for secrets/config (e.g. `get_google_maps_api_key()`).
+- No logic beyond reading and validating presence of env vars. Never logs a secret value.
+
 ## `backend/app/services/`
 
 Business logic and calculations.
@@ -31,7 +49,7 @@ Business logic and calculations.
 - No FastAPI request/response objects. No SQL or direct database access.
 - Takes and returns plain Python/Pydantic values, so it's testable without a database or a running server.
 
-Examples: `scoring.py` (transit penalty, car dependency score), `simulator.py` (improvement recommendations).
+Examples: `scoring.py` (transit penalty, car dependency score), `simulator.py` (improvement recommendations), `trip_comparison.py` (normalizes raw Google Routes API JSON from `clients/` into internal trip-comparison models).
 
 ## `backend/scripts/`
 
@@ -46,7 +64,7 @@ Examples: `seed_db.py`, `import_gtfs.py`.
 Pydantic request/response models only.
 
 - No logic beyond field definitions and Pydantic validation.
-- Split by domain when one file would get too broad. `schemas.py` covers the app's own route scenarios, comparisons, and dashboard; `gtfs_schemas.py` covers imported GTFS data, kept separate since it describes a different data source with different shapes.
+- Split by domain when one file would get too broad. `schemas.py` covers the app's own route scenarios, comparisons, and dashboard; `gtfs_schemas.py` covers imported GTFS data; `trip_compare_schemas.py` covers the arbitrary origin/destination Google Routes flow — kept separate since forcing that response onto the curated `RouteScenario`/`RouteComparison` shape would mean inventing fields (fare, emissions, city) that don't exist for an arbitrary trip.
 
 ## `backend/app/database.py`
 

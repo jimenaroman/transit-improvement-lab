@@ -21,6 +21,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { JourneyRibbon } from '@/components/JourneyRibbon'
 import { RouteMap } from '@/components/RouteMap'
+import { TripComparePanel } from '@/components/TripComparePanel'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 
 const ALL_CITIES = 'All'
@@ -118,6 +119,18 @@ export default function AnalyzeTrip() {
     <>
       <div className="mx-auto flex max-w-[1180px] flex-col gap-6 px-5 pt-7 pb-16 sm:gap-7 sm:px-14 sm:pt-9">
         <h1 className="text-3xl leading-tight font-semibold tracking-tight text-foreground">Analyze a trip</h1>
+
+        <TripComparePanel />
+
+        <Separator />
+
+        <div className="flex flex-col gap-1.5">
+          <h2 className="text-lg font-semibold text-(--neutral-200)">Or try a curated example</h2>
+          <p className="text-sm text-(--neutral-600)">
+            A fixed set of pre-analyzed Dallas and Chicago scenarios, useful as a demo while the trip comparison
+            above is still new.
+          </p>
+        </div>
 
         {routesError && (
           <Alert variant="destructive">

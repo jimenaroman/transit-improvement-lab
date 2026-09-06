@@ -1,4 +1,12 @@
-import type { DashboardSummary, GtfsRouteGeometry, RouteComparison, RouteScenario } from './types'
+import type {
+  DashboardSummary,
+  GtfsRouteGeometry,
+  PlaceSuggestion,
+  RouteComparison,
+  RouteScenario,
+  TripCompareRequest,
+  TripCompareResponse,
+} from './types'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -32,6 +40,27 @@ export async function fetchRouteGeometry(agencySource: string, routeId: string):
   )
   if (!res.ok) {
     throw new Error(`Failed to fetch route geometry (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function fetchPlaceAutocomplete(input: string): Promise<PlaceSuggestion[]> {
+  const res = await fetch(`${API_BASE_URL}/api/places/autocomplete?input=${encodeURIComponent(input)}`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch place suggestions (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function fetchTripComparison(request: TripCompareRequest): Promise<TripCompareResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/trips/compare`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.detail ?? `Failed to compare trip (${res.status})`)
   }
   return res.json()
 }

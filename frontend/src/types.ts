@@ -104,6 +104,67 @@ export interface RouteCategoryCount {
   count: number
 }
 
+export interface LocationInput {
+  label: string
+  place_id?: string
+}
+
+export interface TripCompareRequest {
+  origin: LocationInput
+  destination: LocationInput
+}
+
+export interface PlaceSuggestion {
+  label: string
+  place_id: string
+  primary_text: string
+  secondary_text: string | null
+}
+
+export interface DrivingSummary {
+  duration_minutes: number
+  distance_miles: number | null
+  polyline: string | null
+}
+
+export interface TransitSummary {
+  duration_minutes: number
+  distance_miles: number | null
+  walking_minutes: number
+  transfers: number
+  route_names: string[]
+  polyline: string | null
+}
+
+export interface TripGtfsServiceContext {
+  agency_source: string | null
+  route_short_name: string | null
+  route_long_name: string | null
+  route_id: string | null
+  average_headway_minutes: number | null
+  frequency_classification: string | null
+  service_span_hours: number | null
+  explanation: string | null
+  matched: boolean
+  unmatched_reason: string | null
+}
+
+export interface TripComparisonMetrics {
+  transit_penalty: number
+  extra_minutes: number
+  verdict: string
+}
+
+export interface TripCompareResponse {
+  origin: string
+  destination: string
+  departure_time: string
+  driving: DrivingSummary
+  transit: TransitSummary
+  gtfs_service_context: TripGtfsServiceContext[]
+  comparison: TripComparisonMetrics
+}
+
 export interface DashboardSummary {
   total_routes: number
   average_transit_penalty: number
