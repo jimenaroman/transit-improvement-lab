@@ -11,10 +11,11 @@ through the repository functions.
 
 import sqlite3
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Generator
 
-DB_PATH = Path(__file__).resolve().parents[1] / "transit_lab.db"
+from app.config import get_database_path
+
+DB_PATH = get_database_path()
 
 CREATE_TRIP_SCENARIOS_TABLE = """
 CREATE TABLE IF NOT EXISTS trip_scenarios (
@@ -214,3 +215,29 @@ def init_db() -> None:
         _add_column_if_missing(connection, "gtfs_trips", "shape_id", "TEXT")
         for create_index_statement in CREATE_GTFS_INDEXES:
             connection.execute(create_index_statement)
+
+
+def ensure_database_ready() -> None:
+    """
+    Raises RuntimeError if the configured database doesn't exist or has no
+    curated scenarios yet, instead of silently serving an empty database.
+    Called once from FastAPI's startup lifespan, not from every import.
+    """
+    if not DB_PATH.exists():
+        raise RuntimeError(
+            f"Database not found at {DB_PATH}. Run the production bootstrap first: "
+            "python -m app.bootstrap_production"
+        )
+
+    with get_connection() as connection:
+        try:
+            row = connection.execute("SELECT COUNT(*) AS total FROM trip_scenarios").fetchone()
+        except sqlite3.OperationalError as error:
+            raise RuntimeError(
+                f"Database at {DB_PATH} is not initialized ({error}). Run: python -m app.bootstrap_production"
+            ) from error
+
+    if row["total"] == 0:
+        raise RuntimeError(
+            f"Database at {DB_PATH} has no curated scenarios yet. Run: python -m app.bootstrap_production"
+        )
