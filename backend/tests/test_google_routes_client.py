@@ -95,6 +95,21 @@ def test_fetch_transit_route_uses_transit_mode_and_sends_departure_time(with_api
     assert captured["json"]["departureTime"] == DEPARTURE.isoformat()
 
 
+def test_fetch_transit_route_requests_per_step_polyline(with_api_key, monkeypatch):
+    captured = {}
+
+    def fake_post(url, json, headers, timeout):
+        captured["headers"] = headers
+        return _fake_response(url, {"routes": [{"duration": "1200s"}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    fetch_transit_route(ORIGIN, DESTINATION, DEPARTURE)
+
+    # Needed so the map can color-code walk vs. transit segments.
+    assert "routes.legs.steps.polyline.encodedPolyline" in captured["headers"]["X-Goog-FieldMask"]
+
+
 def test_http_error_status_raises_google_routes_api_error(with_api_key, monkeypatch):
     def fake_post(url, json, headers, timeout):
         return httpx.Response(403, json={"error": "forbidden"}, request=httpx.Request("POST", url))

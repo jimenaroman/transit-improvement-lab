@@ -93,3 +93,42 @@ class DashboardSummary(BaseModel):
     worst_route_by_wait_transfer_minutes: WorstRouteByWaitTransferMinutes | None
     average_wait_transfer_minutes_by_city: list[CityWaitTransferMinutes]
     route_count_by_category: list[RouteCategoryCount]
+
+
+class CategoryTransitPenalty(BaseModel):
+    route_category: str
+    average_transit_penalty: float
+
+
+class ResearchScenarioPoint(BaseModel):
+    """One curated scenario's fields needed for the Research page's charts."""
+
+    id: int
+    city: str
+    origin_label: str
+    destination_label: str
+    route_category: str
+    walking_minutes: int
+    wait_transfer_minutes: int
+    transfers: int
+    transit_penalty: float
+
+
+class ResearchCorrelations(BaseModel):
+    """
+    Pearson correlation coefficients across the curated sample. None means
+    there wasn't enough data or variance to compute one -- never a guess.
+    """
+
+    walking_minutes_vs_transit_penalty: float | None
+    wait_transfer_minutes_vs_transit_penalty: float | None
+    transfers_vs_transit_penalty: float | None
+
+
+class ResearchSummary(BaseModel):
+    scenario_count: int
+    overall_average_transit_penalty: float
+    average_transit_penalty_by_city: list[CityTransitPenalty]
+    average_transit_penalty_by_category: list[CategoryTransitPenalty]
+    scenarios: list[ResearchScenarioPoint]
+    correlations: ResearchCorrelations

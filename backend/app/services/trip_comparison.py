@@ -9,7 +9,7 @@ Pure functions only -- no HTTP, no SQL. See docs/architecture.md.
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from app.trip_compare_schemas import DrivingSummary, TransitSummary
+from app.trip_compare_schemas import DrivingSummary, TransitSummary, TripItineraryLeg, TripRouteSegment
 
 METERS_PER_MILE = 1609.344
 
@@ -110,6 +110,91 @@ def extract_transit_lines(raw_response: dict) -> list[dict]:
     return lines
 
 
+def extract_route_segments(raw_response: dict) -> list[TripRouteSegment]:
+    """
+    Returns one TripRouteSegment per step (WALK and TRANSIT both), in
+    itinerary order, for map rendering. travel_mode is Google's own field --
+    a step this app doesn't recognize still passes its raw value through
+    rather than being dropped or relabeled.
+    """
+    route = _first_route(raw_response)
+    segments = []
+
+    for leg in route.get("legs", []):
+        for step in leg.get("steps", []):
+            travel_mode = step.get("travelMode")
+            if not travel_mode:
+                continue
+            segments.append(
+                TripRouteSegment(
+                    travel_mode=travel_mode,
+                    polyline=step.get("polyline", {}).get("encodedPolyline"),
+                )
+            )
+
+    return segments
+
+
+def _parse_google_timestamp(value: str | None) -> datetime | None:
+    """Google's RFC3339 timestamps ("2026-09-07T14:23:00Z") -- None if missing/unparseable."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def build_transit_itinerary(raw_response: dict) -> list[TripItineraryLeg]:
+    """
+    Builds the rider-facing leg list: a walk leg for any steps before the
+    first ride and after the last, one ride leg per transit step, and one
+    wait leg between each pair of rides.
+
+    A wait's duration is (next ride's departureTime - this ride's
+    arrivalTime), not the duration of whatever step happens to sit between
+    them -- Google doesn't return idle platform-waiting time as its own
+    step, so summing intervening steps would understate it. When either
+    timestamp is missing, duration_minutes is None rather than a guess.
+    """
+    route = _first_route(raw_response)
+    steps = [step for leg in route.get("legs", []) for step in leg.get("steps", [])]
+    transit_indices = [i for i, step in enumerate(steps) if step.get("travelMode") == "TRANSIT"]
+
+    if not transit_indices:
+        total_walk = sum(_parse_duration_minutes(step.get("staticDuration")) for step in steps)
+        return [TripItineraryLeg(kind="walk", label="Walk", duration_minutes=total_walk)] if total_walk else []
+
+    legs: list[TripItineraryLeg] = []
+
+    lead_walk = sum(_parse_duration_minutes(step.get("staticDuration")) for step in steps[: transit_indices[0]])
+    if lead_walk > 0:
+        legs.append(TripItineraryLeg(kind="walk", label="Walk", duration_minutes=lead_walk))
+
+    for position, idx in enumerate(transit_indices):
+        step = steps[idx]
+        transit_line = step.get("transitDetails", {}).get("transitLine", {})
+        label = transit_line.get("nameShort") or transit_line.get("name") or "Transit"
+        legs.append(
+            TripItineraryLeg(kind="ride", label=label, duration_minutes=_parse_duration_minutes(step.get("staticDuration")))
+        )
+
+        if position + 1 < len(transit_indices):
+            next_step = steps[transit_indices[position + 1]]
+            arrival = _parse_google_timestamp(step.get("transitDetails", {}).get("stopDetails", {}).get("arrivalTime"))
+            departure = _parse_google_timestamp(
+                next_step.get("transitDetails", {}).get("stopDetails", {}).get("departureTime")
+            )
+            wait_minutes = max(round((departure - arrival).total_seconds() / 60), 0) if arrival and departure else None
+            legs.append(TripItineraryLeg(kind="wait", label="Transfer", duration_minutes=wait_minutes))
+
+    trail_walk = sum(_parse_duration_minutes(step.get("staticDuration")) for step in steps[transit_indices[-1] + 1 :])
+    if trail_walk > 0:
+        legs.append(TripItineraryLeg(kind="walk", label="Walk", duration_minutes=trail_walk))
+
+    return legs
+
+
 def normalize_transit_route(raw_response: dict) -> TransitSummary:
     route = _first_route(raw_response)
     steps = [step for leg in route.get("legs", []) for step in leg.get("steps", [])]
@@ -132,6 +217,8 @@ def normalize_transit_route(raw_response: dict) -> TransitSummary:
         transfers=max(transit_step_count - 1, 0),
         route_names=route_names,
         polyline=route.get("polyline", {}).get("encodedPolyline"),
+        segments=extract_route_segments(raw_response),
+        itinerary=build_transit_itinerary(raw_response),
     )
 
 

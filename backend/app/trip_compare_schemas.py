@@ -39,6 +39,32 @@ class DrivingSummary(BaseModel):
     polyline: str | None
 
 
+class TripRouteSegment(BaseModel):
+    """One step of the transit itinerary, for map rendering only -- travel_mode
+    is Google's own value ("WALK" or "TRANSIT"), never inferred or guessed.
+    polyline is None on the rare step Google didn't return one for."""
+
+    travel_mode: str
+    polyline: str | None
+
+
+class TripItineraryLeg(BaseModel):
+    """
+    One rider-facing leg of the trip: a walk to/from transit, a ride on one
+    named line, or a wait/transfer between two rides. Unlike TripRouteSegment
+    (one per raw Google step, for the map), consecutive walk steps are
+    merged and each wait is its own leg -- computed from real stop
+    arrival/departure timestamps, not from any step's own duration, since
+    Google doesn't return waiting time as a step. duration_minutes is None
+    only when a wait couldn't be computed (a missing timestamp), never a
+    guessed number.
+    """
+
+    kind: str  # "walk", "ride", or "wait"
+    label: str
+    duration_minutes: int | None
+
+
 class TransitSummary(BaseModel):
     duration_minutes: int
     distance_miles: float | None
@@ -46,6 +72,8 @@ class TransitSummary(BaseModel):
     transfers: int
     route_names: list[str]
     polyline: str | None
+    segments: list[TripRouteSegment]
+    itinerary: list[TripItineraryLeg]
 
 
 class TripGtfsServiceContext(BaseModel):

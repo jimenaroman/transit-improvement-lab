@@ -117,6 +117,9 @@ def test_compare_trip_matches_gtfs_route_and_returns_full_response(seeded_dart_r
     assert body["driving"]["duration_minutes"] == 14
     assert body["transit"]["duration_minutes"] == 31
     assert body["transit"]["route_names"] == ["620"]
+    assert [s["travel_mode"] for s in body["transit"]["segments"]] == ["WALK", "TRANSIT"]
+    assert [leg["kind"] for leg in body["transit"]["itinerary"]] == ["walk", "ride"]
+    assert body["transit"]["itinerary"][1]["label"] == "620"
     assert body["comparison"]["transit_penalty"] == round(31 / 14, 2)
     assert body["comparison"]["extra_minutes"] == 17
 

@@ -23,7 +23,8 @@ DRIVE_FIELD_MASK = "routes.duration,routes.distanceMeters,routes.polyline.encode
 TRANSIT_FIELD_MASK = (
     "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,"
     "routes.legs.steps.travelMode,routes.legs.steps.distanceMeters,"
-    "routes.legs.steps.staticDuration,routes.legs.steps.transitDetails"
+    "routes.legs.steps.staticDuration,routes.legs.steps.transitDetails,"
+    "routes.legs.steps.polyline.encodedPolyline"
 )
 
 
