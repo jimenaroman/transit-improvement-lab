@@ -11,6 +11,17 @@
       rel="stylesheet"
     />
     <title>Transit Improvement Lab</title>
+    <script>
+      // Applied before React mounts so there's no flash of the wrong theme.
+      // Keep this in sync with src/lib/theme.ts's THEME_STORAGE_KEY.
+      (function () {
+        try {
+          var stored = localStorage.getItem('tlab-theme');
+          var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

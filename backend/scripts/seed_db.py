@@ -1,5 +1,5 @@
 """
-Seeds transit_lab.db from data/sample-routes.json.
+Seeds transit_lab.db from backend/seed_data/sample-routes.json.
 
 Run from the backend/ directory:
 

@@ -48,7 +48,7 @@ npm run build
 
 ## Regenerating the database
 
-`backend/transit_lab.db` is generated, not checked into git. If you pull changes to `data/sample-routes.json`, or the database file is missing or stale, re-run:
+`backend/transit_lab.db` is generated, not checked into git. If you pull changes to `backend/seed_data/sample-routes.json`, or the database file is missing or stale, re-run:
 
 ```bash
 cd backend
@@ -71,11 +71,14 @@ backend/
     routes/
       route_scenarios.py          API endpoint handlers
     services/
-      data_loader.py                Parses data/sample-routes.json (seed script only)
+      data_loader.py                Parses backend/seed_data/sample-routes.json (seed script only)
       scoring.py                      Transit penalty, car dependency, emissions
       simulator.py                     Rule-based improvement recommendation
   scripts/
-    seed_db.py                  Seeds transit_lab.db from sample-routes.json
+    seed_db.py                  Seeds transit_lab.db from seed_data/sample-routes.json
+  seed_data/
+    sample-routes.json          Manual V1 seed data (not read live by the API)
+    scenario-gtfs-links.json    Curated scenario <-> GTFS route associations
   tests/                       Pytest suite
 
 frontend/
@@ -83,9 +86,6 @@ frontend/
     App.tsx                    Search / select / analyze UI
     api.ts                       fetch() calls to the backend
     types.ts                      TypeScript types matching the Pydantic schemas
-
-data/
-  sample-routes.json          Manual V1 seed data (not read live by the API)
 ```
 
 ## Known rough edges

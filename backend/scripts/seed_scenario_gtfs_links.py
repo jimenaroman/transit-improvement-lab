@@ -1,5 +1,5 @@
 """
-Seeds trip_scenario_gtfs_routes from data/scenario-gtfs-links.json.
+Seeds trip_scenario_gtfs_routes from backend/seed_data/scenario-gtfs-links.json.
 
 Run from the backend/ directory:
 
@@ -26,7 +26,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.database import init_db  # noqa: E402
 from app.repositories import scenario_gtfs_link_repository  # noqa: E402
 
-LINKS_PATH = Path(__file__).resolve().parents[2] / "data" / "scenario-gtfs-links.json"
+# parents[1] from here is backend/ itself -- correct whether backend/ is
+# checked out inside the monorepo or deployed on its own.
+LINKS_PATH = Path(__file__).resolve().parents[1] / "seed_data" / "scenario-gtfs-links.json"
 
 
 def seed() -> None:

@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MapEmptyState, PolylineMap } from '@/components/PolylineMap'
+import { MapEmptyState, PolylineMap, type RouteSegment } from '@/components/PolylineMap'
 import { PlaceAutocompleteInput } from '@/components/PlaceAutocompleteInput'
+import { TransitItinerary } from '@/components/TransitItinerary'
 
 function formatDepartureTime(iso: string): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -45,8 +46,27 @@ export function TripComparePanel() {
       .finally(() => setLoading(false))
   }
 
+  const usingTransitMap = Boolean(result?.transit.polyline)
   const tripPolyline = result?.transit.polyline ?? result?.driving.polyline ?? null
-  const mapPositions = tripPolyline ? decodePolyline(tripPolyline) : null
+
+  // Decode each segment separately (rather than re-decoding the combined
+  // polyline) so the drawn map is guaranteed consistent with the segments
+  // used for walk/transit coloring below.
+  const mapSegments: RouteSegment[] | undefined =
+    usingTransitMap && result && result.transit.segments.length > 0
+      ? result.transit.segments
+          .filter((segment) => segment.polyline)
+          .map((segment) => ({
+            travelMode: segment.travel_mode,
+            positions: decodePolyline(segment.polyline!),
+          }))
+      : undefined
+
+  const mapPositions = mapSegments?.length
+    ? mapSegments.flatMap((segment) => segment.positions)
+    : tripPolyline
+      ? decodePolyline(tripPolyline)
+      : null
 
   return (
     <section className="flex flex-col gap-4">
@@ -145,6 +165,15 @@ export function TripComparePanel() {
             </div>
           </div>
 
+          {result.transit.itinerary.length > 0 && (
+            <TransitItinerary
+              legs={result.transit.itinerary}
+              totalMinutes={result.transit.duration_minutes}
+              originLabel={result.origin}
+              destinationLabel={result.destination}
+            />
+          )}
+
           {result.gtfs_service_context.length > 0 && (
             <div className="flex flex-col gap-3">
               {result.gtfs_service_context.map((context, index) =>
@@ -206,9 +235,12 @@ export function TripComparePanel() {
             {mapPositions && mapPositions.length > 0 ? (
               <PolylineMap
                 positions={mapPositions}
+                segments={mapSegments}
                 startLabel="Origin"
                 endLabel="Destination"
-                footerNote={result.transit.polyline ? 'Transit route (Google Routes)' : 'Driving route (Google Routes)'}
+                originTooltip={`Origin — ${result.origin}`}
+                destinationTooltip={`Destination — ${result.destination}`}
+                footerNote={usingTransitMap ? 'Transit route (Google Routes)' : 'Driving route (Google Routes)'}
               />
             ) : (
               <MapEmptyState label="No route geometry was returned for this trip." />

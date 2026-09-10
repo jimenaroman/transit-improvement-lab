@@ -1,4 +1,7 @@
 import { NavLink } from 'react-router-dom'
+import { MoonIcon, SunIcon } from 'lucide-react'
+import { useTheme } from '@/lib/theme'
+import { Button } from '@/components/ui/button'
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', end: true },
@@ -19,6 +22,8 @@ function LogoMark() {
 }
 
 export function SiteHeader() {
+  const { theme, toggleTheme } = useTheme()
+
   return (
     <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3.5 border-b border-border bg-background/92 px-5 py-3.5 backdrop-blur-sm sm:px-14">
       <NavLink to="/" className="flex items-center gap-2.5">
@@ -40,6 +45,15 @@ export function SiteHeader() {
             {link.label}
           </NavLink>
         ))}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          onClick={toggleTheme}
+          className="text-(--neutral-500)"
+        >
+          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        </Button>
       </nav>
     </header>
   )

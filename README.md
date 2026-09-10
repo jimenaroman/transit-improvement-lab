@@ -61,7 +61,7 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python scripts/seed_db.py   # creates/refreshes backend/transit_lab.db from data/sample-routes.json
+python scripts/seed_db.py   # creates/refreshes backend/transit_lab.db from backend/seed_data/sample-routes.json
 ./run.sh                    # starts the API on http://localhost:8000
 ```
 
@@ -95,7 +95,7 @@ See [docs/developer-setup.md](docs/developer-setup.md) for a more detailed setup
 
 ## Data Layer
 
-SQLite is the V1 data layer. Route scenarios are seeded from `data/sample-routes.json` into `backend/transit_lab.db`, which is gitignored, generated, and never edited directly.
+SQLite is the V1 data layer. Route scenarios are seeded from `backend/seed_data/sample-routes.json` into `backend/transit_lab.db`, which is gitignored, generated, and never edited directly.
 
 To create or refresh the database after changing `sample-routes.json`:
 

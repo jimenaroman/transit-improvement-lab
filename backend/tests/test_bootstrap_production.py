@@ -63,7 +63,7 @@ def test_bootstrap_fresh_database_imports_gtfs_and_seeds_scenarios(temp_db, gtfs
 
     assert gtfs_repository.count_rows("gtfs_routes", "CTA") == 1
     assert gtfs_repository.count_rows("gtfs_routes", "DART") == 1
-    assert len(route_repository.list_routes()) == 12  # data/sample-routes.json
+    assert len(route_repository.list_routes()) == 12  # backend/seed_data/sample-routes.json
 
 
 def test_bootstrap_is_idempotent_does_not_duplicate_rows(temp_db, gtfs_zip_env):
@@ -110,3 +110,31 @@ def test_bootstrap_leaves_database_ready_for_ensure_database_ready(temp_db, gtfs
     bootstrap_production.main()
 
     database.ensure_database_ready()  # should not raise
+
+
+def test_bootstrap_resumes_after_gtfs_done_but_scenarios_unseeded(temp_db, monkeypatch, tmp_path):
+    """
+    Reproduces the real production failure: GTFS for both agencies already
+    fully imported, but seeding crashed before curated scenarios landed.
+    Re-running must finish the seeding without touching GTFS at all -- no
+    zip path env vars are set here, so any attempt to re-import would fail.
+    """
+    from scripts.import_gtfs import import_gtfs
+
+    cta_zip = tmp_path / "cta.zip"
+    dart_zip = tmp_path / "dart.zip"
+    _write_test_gtfs_zip(cta_zip)
+    _write_test_gtfs_zip(dart_zip)
+    import_gtfs("CTA", cta_zip)
+    import_gtfs("DART", dart_zip)
+    monkeypatch.delenv("GTFS_CTA_ZIP_PATH", raising=False)
+    monkeypatch.delenv("GTFS_DART_ZIP_PATH", raising=False)
+
+    assert len(route_repository.list_routes()) == 0  # confirms the partial state before the fix runs
+
+    bootstrap_production.main()
+
+    assert gtfs_repository.count_rows("gtfs_routes", "CTA") == 1
+    assert gtfs_repository.count_rows("gtfs_stop_times", "CTA") == 2
+    assert gtfs_repository.count_rows("gtfs_routes", "DART") == 1
+    assert len(route_repository.list_routes()) == 12

@@ -127,6 +127,17 @@ export interface DrivingSummary {
   polyline: string | null
 }
 
+export interface TripRouteSegment {
+  travel_mode: string
+  polyline: string | null
+}
+
+export interface TripItineraryLeg {
+  kind: 'walk' | 'ride' | 'wait'
+  label: string
+  duration_minutes: number | null
+}
+
 export interface TransitSummary {
   duration_minutes: number
   distance_miles: number | null
@@ -134,6 +145,8 @@ export interface TransitSummary {
   transfers: number
   route_names: string[]
   polyline: string | null
+  segments: TripRouteSegment[]
+  itinerary: TripItineraryLeg[]
 }
 
 export interface TripGtfsServiceContext {
@@ -163,6 +176,38 @@ export interface TripCompareResponse {
   transit: TransitSummary
   gtfs_service_context: TripGtfsServiceContext[]
   comparison: TripComparisonMetrics
+}
+
+export interface ResearchScenarioPoint {
+  id: number
+  city: string
+  origin_label: string
+  destination_label: string
+  route_category: string
+  walking_minutes: number
+  wait_transfer_minutes: number
+  transfers: number
+  transit_penalty: number
+}
+
+export interface CategoryTransitPenalty {
+  route_category: string
+  average_transit_penalty: number
+}
+
+export interface ResearchCorrelations {
+  walking_minutes_vs_transit_penalty: number | null
+  wait_transfer_minutes_vs_transit_penalty: number | null
+  transfers_vs_transit_penalty: number | null
+}
+
+export interface ResearchSummary {
+  scenario_count: number
+  overall_average_transit_penalty: number
+  average_transit_penalty_by_city: CityTransitPenalty[]
+  average_transit_penalty_by_category: CategoryTransitPenalty[]
+  scenarios: ResearchScenarioPoint[]
+  correlations: ResearchCorrelations
 }
 
 export interface DashboardSummary {

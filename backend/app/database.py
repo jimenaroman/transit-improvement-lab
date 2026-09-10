@@ -2,7 +2,7 @@
 V1 SQLite connection layer.
 
 This is the initial database layer for Transit Improvement Lab. It replaces
-the temporary data/sample-routes.json file with a real SQLite database, so
+the temporary sample-routes.json file with a real SQLite database, so
 route scenarios live in the database instead of being re-read from disk as
 JSON on every request. The repository layer (app/repositories/) is the only
 code that should import from this module — everything else should go
@@ -157,7 +157,7 @@ CREATE_GTFS_INDEXES = [
 # Manual, curated association between a trip_scenarios row (the
 # product-level trip shown in route comparisons) and one or more real GTFS
 # routes that provide scheduled-service evidence for it. Seeded by hand
-# from data/scenario-gtfs-links.json -- this app does not infer these
+# from backend/seed_data/scenario-gtfs-links.json -- this app does not infer these
 # geographically. The UNIQUE constraint stops the same scenario/agency/
 # route combination from being linked twice.
 CREATE_TRIP_SCENARIO_GTFS_ROUTES_TABLE = """

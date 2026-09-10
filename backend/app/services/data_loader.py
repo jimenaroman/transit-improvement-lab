@@ -4,8 +4,8 @@ Seed data loader.
 Route scenarios now live in SQLite (see app/database.py and
 app/repositories/route_repository.py) — the API no longer reads this file
 directly. This module's only remaining job is parsing and validating
-data/sample-routes.json for scripts/seed_db.py, which loads it into the
-database.
+backend/seed_data/sample-routes.json for scripts/seed_db.py, which loads it
+into the database.
 """
 
 import json
@@ -13,8 +13,9 @@ from pathlib import Path
 
 from app.schemas import RouteScenario
 
-
-DATA_PATH = Path(__file__).resolve().parents[3] / "data" / "sample-routes.json"
+# parents[2] from here is backend/ itself, so this stays correct whether
+# backend/ is checked out inside the monorepo or deployed on its own.
+DATA_PATH = Path(__file__).resolve().parents[2] / "seed_data" / "sample-routes.json"
 
 
 def load_routes() -> list[RouteScenario]:

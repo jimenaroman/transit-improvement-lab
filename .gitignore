@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -67,10 +67,14 @@ db.sqlite3
 db.sqlite3-journal
 
 # Transit Improvement Lab: generated SQLite database (regenerate with
-# backend/scripts/seed_db.py)
+# python -m app.bootstrap_production, or backend/scripts/seed_db.py locally).
+# The broader backend/*.db* patterns cover any DATABASE_PATH pointed inside
+# the repo during local testing, not just the default filename.
 backend/transit_lab.db
+backend/*.db
+backend/*.db-journal
 
-# Transit Improvement Lab: downloaded GTFS feed zips (re-downloadable, not source)
+# Transit Improvement Lab: downloaded/local GTFS feed zips (re-downloadable, not source)
 data/gtfs/*.zip
 data/gtfs/**/*.zip
 

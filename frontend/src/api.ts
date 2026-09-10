@@ -2,6 +2,7 @@ import type {
   DashboardSummary,
   GtfsRouteGeometry,
   PlaceSuggestion,
+  ResearchSummary,
   RouteComparison,
   RouteScenario,
   TripCompareRequest,
@@ -30,6 +31,14 @@ export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   const res = await fetch(`${API_BASE_URL}/api/dashboard/summary`)
   if (!res.ok) {
     throw new Error(`Failed to fetch dashboard summary (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function fetchResearchSummary(): Promise<ResearchSummary> {
+  const res = await fetch(`${API_BASE_URL}/api/dashboard/research`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch research summary (${res.status})`)
   }
   return res.json()
 }

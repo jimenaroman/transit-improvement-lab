@@ -4,7 +4,53 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Light theme (default). Every value here has a dark-mode counterpart in
+   .dark below, derived to hit the same WCAG contrast ratio against its own
+   background that the dark-mode value hits against #0b1410 -- not a guess. */
 :root {
+  --background: #f6f4e9;
+  --foreground: #141208;
+  --card: #f9f8f0;
+  --card-foreground: #141208;
+  --popover: #f9f8f0;
+  --popover-foreground: #141208;
+  --primary: #22b45c;
+  --primary-foreground: #07100b;
+  --secondary: rgba(11, 20, 16, 0.05);
+  --secondary-foreground: #252215;
+  --muted: rgba(11, 20, 16, 0.045);
+  --muted-foreground: #5e5c4a;
+  --accent: #e8c247;
+  --accent-foreground: #241a05;
+  --destructive: #b34434;
+  --destructive-foreground: #fdf6f0;
+  --border: rgba(11, 20, 16, 0.14);
+  --input: rgba(11, 20, 16, 0.18);
+  --ring: #22b45c;
+  --radius: 0.44rem;
+
+  /* transit identity, not shadcn tokens -- fixed across both themes on purpose:
+     these are data-legend colors, not surface colors, so their meaning must
+     stay stable regardless of theme. */
+  --transit-ride: #22b45c;
+  --transit-wait: #e8c247;
+  --transit-walk: #c08a52;
+  --transit-drive: #b34434;
+
+  /* warm cream/khaki neutral scale, not shadcn tokens */
+  --neutral-100: #141208;
+  --neutral-200: #1a180d;
+  --neutral-300: #252215;
+  --neutral-400: #383626;
+  --neutral-500: #524f3e;
+  --neutral-600: #5e5c4a;
+  --neutral-700: #706c59;
+  --neutral-800: #837e65;
+
+  color-scheme: light;
+}
+
+.dark {
   --background: #0b1410;
   --foreground: #f6f4e9;
   --card: #0f1a14;
@@ -24,15 +70,12 @@
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.13);
   --ring: #22b45c;
-  --radius: 0.44rem;
 
-  /* transit identity, not shadcn tokens */
   --transit-ride: #22b45c;
   --transit-wait: #e8c247;
   --transit-walk: #c08a52;
   --transit-drive: #b34434;
 
-  /* warm cream/khaki neutral scale, not shadcn tokens */
   --neutral-100: #f6f4e9;
   --neutral-200: #f0eee1;
   --neutral-300: #e5e2d1;

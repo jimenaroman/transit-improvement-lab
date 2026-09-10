@@ -6,7 +6,7 @@ scheduled-service evidence for it.
 
 Like every repository in this codebase, this file only runs SQL and
 returns plain values. The associations themselves are seeded by hand from
-data/scenario-gtfs-links.json via scripts/seed_scenario_gtfs_links.py --
+backend/seed_data/scenario-gtfs-links.json via scripts/seed_scenario_gtfs_links.py --
 this app does not infer them geographically.
 """
 
