@@ -9,7 +9,9 @@ import type {
   TripCompareResponse,
 } from './types'
 
-const API_BASE_URL = 'http://localhost:8000'
+// VITE_API_BASE_URL points at the deployed Railway backend in production;
+// unset locally, it falls back to the local dev FastAPI server.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 export async function fetchRoutes(): Promise<RouteScenario[]> {
   const res = await fetch(`${API_BASE_URL}/api/routes`)
