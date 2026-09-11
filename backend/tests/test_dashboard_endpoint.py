@@ -60,6 +60,8 @@ def test_research_endpoint_returns_scenario_and_aggregates(seeded_db):
     assert body["scenarios"][0]["transit_penalty"] == 3.25
     assert body["average_transit_penalty_by_city"] == [{"city": "Dallas", "average_transit_penalty": 3.25}]
     assert "correlations" in body
+    assert body["scenarios"][0]["bottleneck_category"] == "transfer_burden"  # ROUTE_1 has 2 transfers
+    assert body["bottleneck_distribution"] == [{"category": "transfer_burden", "count": 1}]
 
 
 def test_research_endpoint_empty_database(empty_db):

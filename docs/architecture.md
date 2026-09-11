@@ -49,7 +49,7 @@ Business logic and calculations.
 - No FastAPI request/response objects. No SQL or direct database access.
 - Takes and returns plain Python/Pydantic values, so it's testable without a database or a running server.
 
-Examples: `scoring.py` (transit penalty, car dependency score), `simulator.py` (improvement recommendations), `trip_comparison.py` (normalizes raw Google Routes API JSON from `clients/` into internal trip-comparison models).
+Examples: `scoring.py` (transit penalty, car dependency score), `simulator.py` (improvement recommendations for curated `RouteScenario` rows), `trip_comparison.py` (normalizes raw Google Routes API JSON from `clients/` into internal trip-comparison models), `trip_bottleneck_analysis.py` (deterministic bottleneck classification and recommendations for an arbitrary Google-routed trip -- the live-trip counterpart to `simulator.py`, kept separate since it operates on `TransitSummary`/`DrivingSummary`, not `RouteScenario`).
 
 ## `backend/scripts/`
 

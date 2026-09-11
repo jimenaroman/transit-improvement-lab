@@ -112,6 +112,7 @@ class ResearchScenarioPoint(BaseModel):
     wait_transfer_minutes: int
     transfers: int
     transit_penalty: float
+    bottleneck_category: str
 
 
 class ResearchCorrelations(BaseModel):
@@ -125,6 +126,11 @@ class ResearchCorrelations(BaseModel):
     transfers_vs_transit_penalty: float | None
 
 
+class BottleneckCategoryCount(BaseModel):
+    category: str
+    count: int
+
+
 class ResearchSummary(BaseModel):
     scenario_count: int
     overall_average_transit_penalty: float
@@ -132,3 +138,4 @@ class ResearchSummary(BaseModel):
     average_transit_penalty_by_category: list[CategoryTransitPenalty]
     scenarios: list[ResearchScenarioPoint]
     correlations: ResearchCorrelations
+    bottleneck_distribution: list[BottleneckCategoryCount]

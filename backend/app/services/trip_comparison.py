@@ -195,6 +195,19 @@ def build_transit_itinerary(raw_response: dict) -> list[TripItineraryLeg]:
     return legs
 
 
+def total_riding_minutes(itinerary: list[TripItineraryLeg]) -> int:
+    return sum(leg.duration_minutes or 0 for leg in itinerary if leg.kind == "ride")
+
+
+def total_wait_minutes(itinerary: list[TripItineraryLeg]) -> int | None:
+    """None only if at least one wait leg's duration is itself None -- a trip
+    with zero transfers correctly returns 0, not None."""
+    wait_legs = [leg for leg in itinerary if leg.kind == "wait"]
+    if any(leg.duration_minutes is None for leg in wait_legs):
+        return None
+    return sum(leg.duration_minutes for leg in wait_legs)
+
+
 def normalize_transit_route(raw_response: dict) -> TransitSummary:
     route = _first_route(raw_response)
     steps = [step for leg in route.get("legs", []) for step in leg.get("steps", [])]
@@ -210,15 +223,19 @@ def normalize_transit_route(raw_response: dict) -> TransitSummary:
         if name and name not in route_names:
             route_names.append(name)
 
+    itinerary = build_transit_itinerary(raw_response)
+
     return TransitSummary(
         duration_minutes=_parse_duration_minutes(route.get("duration")),
         distance_miles=_meters_to_miles(route.get("distanceMeters")),
         walking_minutes=walking_minutes,
+        riding_minutes=total_riding_minutes(itinerary),
+        wait_minutes=total_wait_minutes(itinerary),
         transfers=max(transit_step_count - 1, 0),
         route_names=route_names,
         polyline=route.get("polyline", {}).get("encodedPolyline"),
         segments=extract_route_segments(raw_response),
-        itinerary=build_transit_itinerary(raw_response),
+        itinerary=itinerary,
     )
 
 

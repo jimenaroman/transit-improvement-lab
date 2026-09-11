@@ -12,6 +12,7 @@ import statistics
 from collections import defaultdict
 
 from app.schemas import (
+    BottleneckCategoryCount,
     CategoryTransitPenalty,
     CityTransitPenalty,
     ResearchCorrelations,
@@ -20,6 +21,28 @@ from app.schemas import (
     RouteScenario,
 )
 from app.services.scoring import calculate_transit_penalty
+from app.services.trip_bottleneck_analysis import classify_bottlenecks_from_metrics
+
+
+def _primary_bottleneck_category(route: RouteScenario, transit_penalty: float) -> str:
+    """
+    The first (highest-priority) triggered category for this curated
+    scenario. frequency_classification is always None here -- this sample's
+    aggregate view doesn't join live per-scenario GTFS data, so
+    service_frequency/route_directness simply won't fire; the other
+    categories still work from the scenario's own stored fields.
+    """
+    findings = classify_bottlenecks_from_metrics(
+        walking_minutes=route.walking_minutes,
+        wait_minutes=route.wait_transfer_minutes,
+        transit_minutes=route.transit_minutes,
+        driving_minutes=route.driving_minutes,
+        transfers=route.transfers,
+        transit_penalty=transit_penalty,
+        frequency_classification=None,
+        average_headway_minutes=None,
+    )
+    return findings[0].category
 
 
 def _pearson_correlation(xs: list[float], ys: list[float]) -> float | None:
@@ -44,11 +67,20 @@ def _average_transit_penalty_by(
 
 def build_research_summary(routes: list[RouteScenario]) -> ResearchSummary:
     penalties = [calculate_transit_penalty(route) for route in routes]
+    bottleneck_categories = [_primary_bottleneck_category(route, penalty) for route, penalty in zip(routes, penalties)]
 
     by_city = sorted(_average_transit_penalty_by(routes, penalties, "city"))
     by_category = sorted(
         _average_transit_penalty_by(routes, penalties, "route_category"),
         key=lambda entry: entry[1],
+        reverse=True,
+    )
+    bottleneck_counts: dict[str, int] = defaultdict(int)
+    for category in bottleneck_categories:
+        bottleneck_counts[category] += 1
+    bottleneck_distribution = sorted(
+        (BottleneckCategoryCount(category=category, count=count) for category, count in bottleneck_counts.items()),
+        key=lambda entry: entry.count,
         reverse=True,
     )
 
@@ -73,8 +105,9 @@ def build_research_summary(routes: list[RouteScenario]) -> ResearchSummary:
                 wait_transfer_minutes=route.wait_transfer_minutes,
                 transfers=route.transfers,
                 transit_penalty=penalty,
+                bottleneck_category=category,
             )
-            for route, penalty in zip(routes, penalties)
+            for route, penalty, category in zip(routes, penalties, bottleneck_categories)
         ],
         correlations=ResearchCorrelations(
             walking_minutes_vs_transit_penalty=_pearson_correlation(
@@ -85,4 +118,5 @@ def build_research_summary(routes: list[RouteScenario]) -> ResearchSummary:
             ),
             transfers_vs_transit_penalty=_pearson_correlation([route.transfers for route in routes], penalties),
         ),
+        bottleneck_distribution=bottleneck_distribution,
     )

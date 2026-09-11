@@ -131,6 +131,13 @@ def test_compare_trip_matches_gtfs_route_and_returns_full_response(seeded_dart_r
     assert ctx[0]["average_headway_minutes"] == 20.0
     assert ctx[0]["frequency_classification"] == "moderate"
 
+    assert body["transit"]["riding_minutes"] == 0  # no staticDuration on the TRANSIT step in this fixture
+    assert body["transit"]["wait_minutes"] == 0  # single ride, no transfers -- known zero, not missing
+    assert len(body["bottlenecks"]) > 0
+    assert "service_frequency" in [b["category"] for b in body["bottlenecks"]]  # moderate headway above
+    assert len(body["recommendations"]) == len(body["bottlenecks"])
+    assert all(r["estimated_impact"] is None for r in body["recommendations"])
+
 
 def test_compare_trip_includes_representative_weekday_departure_time(seeded_dart_route, monkeypatch):
     from datetime import datetime
@@ -253,8 +260,12 @@ def test_compare_trip_malformed_transit_legs_does_not_crash(temp_db, monkeypatch
     body = response.json()
     assert body["transit"]["duration_minutes"] == 15
     assert body["transit"]["walking_minutes"] == 0
+    assert body["transit"]["riding_minutes"] == 0
+    assert body["transit"]["wait_minutes"] == 0
     assert body["transit"]["transfers"] == 0
     assert body["gtfs_service_context"] == []
+    assert [b["category"] for b in body["bottlenecks"]] == ["competitive"]
+    assert body["recommendations"] == []  # nothing to recommend against a competitive trip
 
 
 def test_compare_trip_missing_request_fields_returns_422():

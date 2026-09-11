@@ -69,6 +69,8 @@ class TransitSummary(BaseModel):
     duration_minutes: int
     distance_miles: float | None
     walking_minutes: int
+    riding_minutes: int
+    wait_minutes: int | None  # None only when a real wait couldn't be computed from timestamps
     transfers: int
     route_names: list[str]
     polyline: str | None
@@ -102,6 +104,38 @@ class TripComparisonMetrics(BaseModel):
     verdict: str
 
 
+class TripBottleneck(BaseModel):
+    """
+    One deterministic, rule-based observation about why this specific trip
+    may be slower than driving -- never a claim of causation, only that a
+    measured pattern (walking share, transfer count, real wait time, matched
+    GTFS frequency) is consistent with this category.
+    """
+
+    category: str
+    label: str
+    evidence: str
+    confidence: str  # "low", "moderate", or "high" -- how directly measured the signal is
+
+
+class TripImprovementSuggestion(BaseModel):
+    """
+    One structured, deterministic recommendation tied to a single
+    TripBottleneck. estimated_impact is None for every live-trip suggestion
+    today -- there is no validated simulator wired to this data path yet
+    (simulator.py only estimates for curated RouteScenario rows), so this
+    never invents a number for an arbitrary Google-routed trip.
+    """
+
+    category: str
+    title: str
+    evidence: str
+    rationale: str
+    estimated_impact: str | None
+    confidence: str
+    limitation: str
+
+
 class TripCompareResponse(BaseModel):
     origin: str
     destination: str
@@ -110,6 +144,8 @@ class TripCompareResponse(BaseModel):
     transit: TransitSummary
     gtfs_service_context: list[TripGtfsServiceContext]
     comparison: TripComparisonMetrics
+    bottlenecks: list[TripBottleneck]
+    recommendations: list[TripImprovementSuggestion]
 
 
 class PlaceSuggestion(BaseModel):

@@ -19,7 +19,10 @@ from app.services.trip_comparison import (
     normalize_drive_route,
     normalize_transit_route,
     resolve_representative_departure_time,
+    total_riding_minutes,
+    total_wait_minutes,
 )
+from app.trip_compare_schemas import TripItineraryLeg
 
 CENTRAL = ZoneInfo("America/Chicago")
 
@@ -95,6 +98,8 @@ def test_normalize_transit_route_sums_walking_and_counts_transfers():
 
     assert transit.duration_minutes == 31
     assert transit.walking_minutes == 11  # 360s + 300s = 660s = 11 min
+    assert transit.riding_minutes == 0  # this fixture's TRANSIT step has no staticDuration
+    assert transit.wait_minutes == 0  # single ride -> no transfers -> known zero, not missing
     assert transit.transfers == 0  # one transit step -> no transfer
     assert transit.route_names == ["620"]
     assert transit.polyline == "xyz789"
@@ -403,3 +408,46 @@ def test_build_transit_itinerary_falls_back_to_long_name():
     legs = build_transit_itinerary(response)
 
     assert legs[0].label == "DART LIGHT RAIL - RED LINE"
+
+
+def test_total_riding_minutes_sums_only_ride_legs():
+    itinerary = [
+        TripItineraryLeg(kind="walk", label="Walk", duration_minutes=5),
+        TripItineraryLeg(kind="ride", label="057", duration_minutes=10),
+        TripItineraryLeg(kind="wait", label="Transfer", duration_minutes=8),
+        TripItineraryLeg(kind="ride", label="RED", duration_minutes=22),
+    ]
+
+    assert total_riding_minutes(itinerary) == 32
+
+
+def test_total_riding_minutes_empty_itinerary_is_zero():
+    assert total_riding_minutes([]) == 0
+
+
+def test_total_wait_minutes_sums_wait_legs():
+    itinerary = [
+        TripItineraryLeg(kind="ride", label="057", duration_minutes=10),
+        TripItineraryLeg(kind="wait", label="Transfer", duration_minutes=8),
+        TripItineraryLeg(kind="ride", label="RED", duration_minutes=22),
+        TripItineraryLeg(kind="wait", label="Transfer", duration_minutes=7),
+        TripItineraryLeg(kind="ride", label="ORANGE", duration_minutes=53),
+    ]
+
+    assert total_wait_minutes(itinerary) == 15
+
+
+def test_total_wait_minutes_zero_transfers_is_zero_not_none():
+    itinerary = [TripItineraryLeg(kind="ride", label="RED", duration_minutes=10)]
+
+    assert total_wait_minutes(itinerary) == 0
+
+
+def test_total_wait_minutes_none_if_any_wait_leg_unknown():
+    itinerary = [
+        TripItineraryLeg(kind="ride", label="A", duration_minutes=10),
+        TripItineraryLeg(kind="wait", label="Transfer", duration_minutes=None),
+        TripItineraryLeg(kind="ride", label="B", duration_minutes=10),
+    ]
+
+    assert total_wait_minutes(itinerary) is None

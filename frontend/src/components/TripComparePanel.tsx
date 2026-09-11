@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MapEmptyState, PolylineMap, type RouteSegment } from '@/components/PolylineMap'
 import { PlaceAutocompleteInput } from '@/components/PlaceAutocompleteInput'
 import { TransitItinerary } from '@/components/TransitItinerary'
+import { TripAnalysis } from '@/components/TripAnalysis'
 
 function formatDepartureTime(iso: string): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -165,6 +166,14 @@ export function TripComparePanel() {
             </div>
           </div>
 
+          <TripAnalysis
+            walkingMinutes={result.transit.walking_minutes}
+            waitMinutes={result.transit.wait_minutes}
+            ridingMinutes={result.transit.riding_minutes}
+            bottlenecks={result.bottlenecks}
+            recommendations={result.recommendations}
+          />
+
           {result.transit.itinerary.length > 0 && (
             <TransitItinerary
               legs={result.transit.itinerary}
@@ -175,59 +184,66 @@ export function TripComparePanel() {
           )}
 
           {result.gtfs_service_context.length > 0 && (
-            <div className="flex flex-col gap-3">
-              {result.gtfs_service_context.map((context, index) =>
-                context.matched ? (
-                  <Card key={`${context.agency_source}-${context.route_id}-${index}`} className="border-primary/35 bg-primary/6 gap-3 p-5">
-                    <CardContent className="flex flex-col gap-3 px-0">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="rounded-[3px] bg-primary px-2 py-1.5 font-mono text-[11px] font-semibold text-primary-foreground">
-                          {context.agency_source}
-                        </span>
-                        <span className="text-sm font-semibold text-(--neutral-200)">
-                          {context.route_short_name} — {context.route_long_name}
-                        </span>
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-3">
-                        <div>
-                          <div className="mb-1.5 text-[11px] text-(--neutral-600)">Average headway</div>
-                          <div className="font-mono text-sm font-semibold text-(--neutral-300)">
-                            {formatMinutes(context.average_headway_minutes)}
+            <details className="group rounded-[9px] border border-border">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3.5 text-sm font-semibold text-(--neutral-200)">
+                Scheduled GTFS service evidence ({result.gtfs_service_context.length})
+                <span className="font-mono text-[11px] font-normal text-(--neutral-700) group-open:hidden">Show</span>
+                <span className="hidden font-mono text-[11px] font-normal text-(--neutral-700) group-open:inline">Hide</span>
+              </summary>
+              <div className="flex flex-col gap-3 border-t border-border p-5 pt-4">
+                {result.gtfs_service_context.map((context, index) =>
+                  context.matched ? (
+                    <Card key={`${context.agency_source}-${context.route_id}-${index}`} className="border-primary/35 bg-primary/6 gap-3 p-5">
+                      <CardContent className="flex flex-col gap-3 px-0">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span className="rounded-[3px] bg-primary px-2 py-1.5 font-mono text-[11px] font-semibold text-primary-foreground">
+                            {context.agency_source}
+                          </span>
+                          <span className="text-sm font-semibold text-(--neutral-200)">
+                            {context.route_short_name} — {context.route_long_name}
+                          </span>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                          <div>
+                            <div className="mb-1.5 text-[11px] text-(--neutral-600)">Average headway</div>
+                            <div className="font-mono text-sm font-semibold text-(--neutral-300)">
+                              {formatMinutes(context.average_headway_minutes)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1.5 text-[11px] text-(--neutral-600)">Frequency</div>
+                            <div className="text-sm font-semibold text-(--neutral-300)">
+                              {context.frequency_classification ? capitalize(context.frequency_classification) : '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1.5 text-[11px] text-(--neutral-600)">Service span</div>
+                            <div className="font-mono text-sm font-semibold text-(--neutral-300)">
+                              {formatHours(context.service_span_hours)}
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <div className="mb-1.5 text-[11px] text-(--neutral-600)">Frequency</div>
-                          <div className="text-sm font-semibold text-(--neutral-300)">
-                            {context.frequency_classification ? capitalize(context.frequency_classification) : '—'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-1.5 text-[11px] text-(--neutral-600)">Service span</div>
-                          <div className="font-mono text-sm font-semibold text-(--neutral-300)">
-                            {formatHours(context.service_span_hours)}
-                          </div>
-                        </div>
-                      </div>
-                      {context.explanation && (
-                        <p className="border-t border-border pt-3 text-[13px] leading-relaxed text-(--neutral-500)">
-                          {context.explanation}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div
-                    key={`unmatched-${index}`}
-                    className="flex flex-wrap items-center justify-between gap-2.5 rounded-[7px] border border-dashed border-border px-4 py-3"
-                  >
-                    <span className="text-[13px] text-(--neutral-500)">
-                      {context.route_short_name ?? context.route_long_name ?? 'Transit line'} — no GTFS service data
-                    </span>
-                    <span className="font-mono text-[11px] text-(--neutral-700)">{context.unmatched_reason}</span>
-                  </div>
-                ),
-              )}
-            </div>
+                        {context.explanation && (
+                          <p className="border-t border-border pt-3 text-[13px] leading-relaxed text-(--neutral-500)">
+                            {context.explanation}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div
+                      key={`unmatched-${index}`}
+                      className="flex flex-wrap items-center justify-between gap-2.5 rounded-[7px] border border-dashed border-border px-4 py-3"
+                    >
+                      <span className="text-[13px] text-(--neutral-500)">
+                        {context.route_short_name ?? context.route_long_name ?? 'Transit line'} — no GTFS service data
+                      </span>
+                      <span className="font-mono text-[11px] text-(--neutral-700)">{context.unmatched_reason}</span>
+                    </div>
+                  ),
+                )}
+              </div>
+            </details>
           )}
 
           <div className="flex flex-col gap-2">

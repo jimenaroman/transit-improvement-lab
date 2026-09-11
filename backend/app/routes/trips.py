@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 from app.clients.google_routes_client import GoogleRoutesApiError, fetch_drive_route, fetch_transit_route
 from app.repositories import gtfs_service_repository
 from app.services import gtfs_metrics
+from app.services.trip_bottleneck_analysis import classify_bottlenecks, recommend_improvements
 from app.services.trip_comparison import (
     TripComparisonError,
     build_trip_verdict,
@@ -53,6 +54,8 @@ def compare_trip(request: TripCompareRequest) -> TripCompareResponse:
     gtfs_service_context = _build_trip_gtfs_service_context(transit_raw, departure_time.date())
     extra_minutes = transit.duration_minutes - driving.duration_minutes
 
+    bottlenecks = classify_bottlenecks(transit, driving, transit_penalty, gtfs_service_context)
+
     return TripCompareResponse(
         origin=request.origin.label,
         destination=request.destination.label,
@@ -65,6 +68,8 @@ def compare_trip(request: TripCompareRequest) -> TripCompareResponse:
             "extra_minutes": extra_minutes,
             "verdict": build_trip_verdict(extra_minutes),
         },
+        bottlenecks=bottlenecks,
+        recommendations=recommend_improvements(bottlenecks),
     )
 
 

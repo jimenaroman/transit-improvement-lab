@@ -117,3 +117,26 @@ def test_correlation_none_with_fewer_than_two_scenarios():
     summary = build_research_summary([ROUTE_1])
 
     assert summary.correlations.walking_minutes_vs_transit_penalty is None
+
+
+def test_build_research_summary_assigns_a_bottleneck_category_per_scenario():
+    summary = build_research_summary([ROUTE_1, ROUTE_2, ROUTE_3])
+
+    categories = {s.id: s.bottleneck_category for s in summary.scenarios}
+    assert categories[1] == "transfer_burden"  # 2 transfers
+    assert categories[2] == "competitive"  # nothing crosses a threshold
+    assert categories[3] == "transfer_coordination"  # 12 min wait over 1 transfer
+
+
+def test_build_research_summary_bottleneck_distribution_counts_and_sorts():
+    summary = build_research_summary([ROUTE_1, ROUTE_2, ROUTE_3])
+
+    counts = {row.category: row.count for row in summary.bottleneck_distribution}
+    assert counts == {"transfer_burden": 1, "competitive": 1, "transfer_coordination": 1}
+    assert sum(counts.values()) == 3
+
+
+def test_build_research_summary_empty_scenarios_has_empty_bottleneck_distribution():
+    summary = build_research_summary([])
+
+    assert summary.bottleneck_distribution == []

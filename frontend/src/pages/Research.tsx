@@ -13,6 +13,15 @@ const formatPenalty = (value: number) => `${value.toFixed(2)}×`
 const formatMinutes = (value: number) => `${Math.round(value)} min`
 const formatCount = (value: number) => `${value}`
 
+const BOTTLENECK_LABELS: Record<string, string> = {
+  access_burden: 'Access burden (walking)',
+  service_frequency: 'Service frequency',
+  transfer_burden: 'Transfer burden',
+  transfer_coordination: 'Transfer coordination',
+  route_directness: 'Route directness',
+  competitive: 'Generally competitive',
+}
+
 function correlationStrength(r: number): string {
   const magnitude = Math.abs(r)
   if (magnitude >= 0.6) return 'strong'
@@ -92,6 +101,14 @@ export default function Research() {
       color: 'var(--accent)',
     })) ?? []
 
+  const bottleneckItems: HorizontalBarItem[] =
+    research?.bottleneck_distribution.map((entry) => ({
+      key: entry.category,
+      label: BOTTLENECK_LABELS[entry.category] ?? capitalize(entry.category.replaceAll('_', ' ')),
+      value: entry.count,
+      color: 'var(--transit-wait)',
+    })) ?? []
+
   return (
     <>
       <div className="mx-auto flex max-w-[1240px] flex-col gap-9 px-5 pt-10 pb-16 sm:px-14 sm:pt-14">
@@ -100,11 +117,12 @@ export default function Research() {
             Exploratory analysis
           </div>
           <h1 className="max-w-[780px] text-3xl leading-tight font-semibold tracking-tight text-balance text-foreground sm:text-4xl">
-            What makes a transit trip slower than driving, in this curated sample?
+            How difficult are these trips without a car, and what factors appear related to the penalty?
           </h1>
           <p className="max-w-[640px] text-[15px] leading-relaxed text-(--neutral-500)">
-            Explores relationships between walking, waiting, transfers, and the transit penalty across the
-            project's curated origin–destination scenarios.
+            Explores car dependency, access burden, and transit usability within this curated sample --
+            relationships between walking, waiting, transfers, and the transit penalty, not a comprehensive
+            citywide comparison.
           </p>
         </div>
 
@@ -229,6 +247,18 @@ export default function Research() {
                 <p className="text-[12px] text-(--neutral-600)">Worst first. Click a scenario to open it in Analyze Trip.</p>
               </div>
               <HorizontalBarList items={rankedItems} formatValue={formatPenalty} showRank />
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-(--neutral-200)">Bottleneck-category distribution</h2>
+                <p className="text-[12px] text-(--neutral-600)">
+                  Each scenario's single most likely contributing factor, using the same deterministic rules as
+                  Analyze Trip. Categories needing live scheduled-service data (frequency, route directness) don't
+                  appear here since this aggregate view doesn't join per-scenario GTFS data.
+                </p>
+              </div>
+              <HorizontalBarList items={bottleneckItems} formatValue={formatCount} />
             </div>
 
             <div className="flex flex-col gap-3">

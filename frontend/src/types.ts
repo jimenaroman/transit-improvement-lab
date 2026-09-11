@@ -142,6 +142,8 @@ export interface TransitSummary {
   duration_minutes: number
   distance_miles: number | null
   walking_minutes: number
+  riding_minutes: number
+  wait_minutes: number | null
   transfers: number
   route_names: string[]
   polyline: string | null
@@ -168,6 +170,23 @@ export interface TripComparisonMetrics {
   verdict: string
 }
 
+export interface TripBottleneck {
+  category: string
+  label: string
+  evidence: string
+  confidence: string
+}
+
+export interface TripImprovementSuggestion {
+  category: string
+  title: string
+  evidence: string
+  rationale: string
+  estimated_impact: string | null
+  confidence: string
+  limitation: string
+}
+
 export interface TripCompareResponse {
   origin: string
   destination: string
@@ -176,6 +195,8 @@ export interface TripCompareResponse {
   transit: TransitSummary
   gtfs_service_context: TripGtfsServiceContext[]
   comparison: TripComparisonMetrics
+  bottlenecks: TripBottleneck[]
+  recommendations: TripImprovementSuggestion[]
 }
 
 export interface ResearchScenarioPoint {
@@ -188,6 +209,12 @@ export interface ResearchScenarioPoint {
   wait_transfer_minutes: number
   transfers: number
   transit_penalty: number
+  bottleneck_category: string
+}
+
+export interface BottleneckCategoryCount {
+  category: string
+  count: number
 }
 
 export interface CategoryTransitPenalty {
@@ -208,6 +235,7 @@ export interface ResearchSummary {
   average_transit_penalty_by_category: CategoryTransitPenalty[]
   scenarios: ResearchScenarioPoint[]
   correlations: ResearchCorrelations
+  bottleneck_distribution: BottleneckCategoryCount[]
 }
 
 export interface DashboardSummary {
